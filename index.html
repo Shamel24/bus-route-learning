@@ -703,8 +703,8 @@
 
   // Fixed road network — a handful of horizontal/vertical "streets" the
   // motor is constrained to drive along.
-  const ROADS_H = [0.18, 0.42, 0.63, 0.86].map(f => f * CH);
-  const ROADS_V = [0.15, 0.38, 0.6, 0.82].map(f => f * CW);
+  const ROADS_H = [0.04, 0.18, 0.42, 0.63, 0.86, 0.96].map(f => f * CH);
+  const ROADS_V = [0.04, 0.15, 0.38, 0.6, 0.82, 0.96].map(f => f * CW);
   const INTERSECTION_TOLERANCE = 14; // px — how close counts as "at" an intersection
 
   let points = [];        // {x, y, label}  label = class index
@@ -716,8 +716,8 @@
   // Live motor position on the map, constrained to the road network: the
   // motor always sits exactly on a road, facing one of 4 cardinal
   // directions, and can only turn 90° when it's at an intersection.
-  let robotX = ROADS_V[1];
-  let robotY = ROADS_H[1];
+  let robotX = ROADS_V[2];
+  let robotY = ROADS_H[2];
   let robotFacing = 'right'; // 'up' | 'down' | 'left' | 'right'
   let currentDriveDir = 'stop';
   let driveAnimFrame = null;
@@ -1229,6 +1229,19 @@
     return pred;
   }
 
+  // For a stop that was actually part of the demonstrated route, its exact
+  // recorded position is used directly — this is what makes the predicted
+  // route match the original as closely as possible. The model's own
+  // prediction is only relied on for stops that were never driven to,
+  // since there's no ground truth to use for those.
+  function effectiveRank(p) {
+    const idx = visitedRoute.indexOf(p);
+    if (idx !== -1) {
+      return visitedRoute.length > 1 ? idx / (visitedRoute.length - 1) : 0;
+    }
+    return predictRank(p);
+  }
+
   // Ranks every current store pin (visited or not) and shows the model's
   // suggested visiting order.
   // Ranks every stop, then groups stops that share a road together and
@@ -1242,7 +1255,7 @@
   function predictRoute() {
     if (!routeModel || points.length === 0) return;
 
-    const ranked = points.map(p => ({ p, rank: predictRank(p) }));
+    const ranked = points.map(p => ({ p, rank: effectiveRank(p) }));
 
     const groups = new Map(); // "h:0.18" / "v:0.15" -> [{p, rank}, ...]
     for (const item of ranked) {
@@ -1508,37 +1521,71 @@
     ctx.save();
     ctx.globalAlpha = alpha;
 
+    // Roads are clipped to the bounding box formed by the outermost roads
+    // (rather than spanning the full canvas edge-to-edge), so the map reads
+    // as a bounded town with a real perimeter instead of streets that just
+    // run off the visible area indefinitely.
+    const minX = ROADS_V[0], maxX = ROADS_V[ROADS_V.length - 1];
+    const minY = ROADS_H[0], maxY = ROADS_H[ROADS_H.length - 1];
+    const CORNER_RADIUS = 26; // purely visual — the logical grid stays square
+
+    // Traces the outer perimeter as one continuous path with rounded
+    // corners (a visual flourish only; intersection detection, turning, and
+    // store snapping all still use the plain straight-line road positions).
+    function tracePerimeter() {
+      ctx.beginPath();
+      ctx.moveTo(minX + CORNER_RADIUS, minY);
+      ctx.lineTo(maxX - CORNER_RADIUS, minY);
+      ctx.arcTo(maxX, minY, maxX, minY + CORNER_RADIUS, CORNER_RADIUS);
+      ctx.lineTo(maxX, maxY - CORNER_RADIUS);
+      ctx.arcTo(maxX, maxY, maxX - CORNER_RADIUS, maxY, CORNER_RADIUS);
+      ctx.lineTo(minX + CORNER_RADIUS, maxY);
+      ctx.arcTo(minX, maxY, minX, maxY - CORNER_RADIUS, CORNER_RADIUS);
+      ctx.lineTo(minX, minY + CORNER_RADIUS);
+      ctx.arcTo(minX, minY, minX + CORNER_RADIUS, minY, CORNER_RADIUS);
+      ctx.closePath();
+    }
+
+    const innerH = ROADS_H.slice(1, -1);
+    const innerV = ROADS_V.slice(1, -1);
+
     // road bed
     ctx.strokeStyle = '#2c303c';
     ctx.lineWidth = 14;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    tracePerimeter();
+    ctx.stroke();
     ctx.lineCap = 'butt';
-    [...ROADS_H].forEach(y => {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CW, y); ctx.stroke();
+    innerH.forEach(y => {
+      ctx.beginPath(); ctx.moveTo(minX, y); ctx.lineTo(maxX, y); ctx.stroke();
     });
-    [...ROADS_V].forEach(x => {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CH); ctx.stroke();
+    innerV.forEach(x => {
+      ctx.beginPath(); ctx.moveTo(x, minY); ctx.lineTo(x, maxY); ctx.stroke();
     });
 
     // dashed center lines
     ctx.strokeStyle = '#565c6e';
     ctx.lineWidth = 1.5;
     ctx.setLineDash([6, 6]);
-    ROADS_H.forEach(y => {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CW, y); ctx.stroke();
+    tracePerimeter();
+    ctx.stroke();
+    innerH.forEach(y => {
+      ctx.beginPath(); ctx.moveTo(minX, y); ctx.lineTo(maxX, y); ctx.stroke();
     });
-    ROADS_V.forEach(x => {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CH); ctx.stroke();
+    innerV.forEach(x => {
+      ctx.beginPath(); ctx.moveTo(x, minY); ctx.lineTo(x, maxY); ctx.stroke();
     });
     ctx.setLineDash([]);
 
-    // faint "city block" grid for texture
+    // faint "city block" grid for texture, also clipped to the bounded area
     ctx.strokeStyle = 'rgba(255,255,255,0.03)';
     ctx.lineWidth = 1;
-    for (let gx = 0; gx < CW; gx += 20) {
-      ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, CH); ctx.stroke();
+    for (let gx = minX; gx < maxX; gx += 20) {
+      ctx.beginPath(); ctx.moveTo(gx, minY); ctx.lineTo(gx, maxY); ctx.stroke();
     }
-    for (let gy = 0; gy < CH; gy += 20) {
-      ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(CW, gy); ctx.stroke();
+    for (let gy = minY; gy < maxY; gy += 20) {
+      ctx.beginPath(); ctx.moveTo(minX, gy); ctx.lineTo(maxX, gy); ctx.stroke();
     }
 
     ctx.restore();
@@ -1693,8 +1740,8 @@
 
   function resetRobotPosition() {
     if (autopilotActive) { stopAutopilot(); driveRealMotor('stop'); }
-    robotX = ROADS_V[1];
-    robotY = ROADS_H[1];
+    robotX = ROADS_V[2];
+    robotY = ROADS_H[2];
     robotFacing = 'right';
     departedIntersection = true;
     pendingTurn = null;
