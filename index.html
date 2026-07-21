@@ -716,8 +716,8 @@
   // Live motor position on the map, constrained to the road network: the
   // motor always sits exactly on a road, facing one of 4 cardinal
   // directions, and can only turn 90° when it's at an intersection.
-  let robotX = ROADS_V[2];
-  let robotY = ROADS_H[2];
+  let robotX = ROADS_V[0];
+  let robotY = ROADS_H[0];
   let robotFacing = 'right'; // 'up' | 'down' | 'left' | 'right'
   let currentDriveDir = 'stop';
   let driveAnimFrame = null;
@@ -1740,8 +1740,8 @@
 
   function resetRobotPosition() {
     if (autopilotActive) { stopAutopilot(); driveRealMotor('stop'); }
-    robotX = ROADS_V[2];
-    robotY = ROADS_H[2];
+    robotX = ROADS_V[0];
+    robotY = ROADS_H[0];
     robotFacing = 'right';
     departedIntersection = true;
     pendingTurn = null;
