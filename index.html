@@ -1325,6 +1325,10 @@
   let autopilotFrame = null;
   let autopilotLastTime = null;
   let autopilotTabId = 'supervised';
+  // How many predicted stops the bus has actually driven past so far this
+  // run — gold order badges only appear for stops up to this count, so they
+  // reveal one at a time as the bus reaches them instead of all at once.
+  let autopilotStopsReached = 0;
 
   function facingNeededFor(from, to) {
     const dx = to.x - from.x, dy = to.y - from.y;
@@ -1369,6 +1373,7 @@
     // blue trail must stay visible, so only the position is reset here.
     resetRobotPositionOnly();
     autopilotTrail = [{ x: robotX, y: robotY }];
+    autopilotStopsReached = 0;
 
     autopilotTabId = tabId;
     const built = buildAutopilotRoute();
@@ -1449,19 +1454,19 @@
       robotX = target.x;
       robotY = target.y;
       autopilotTrail.push({ x: robotX, y: robotY });
-      draw();
-
-      driveRealMotor('stop');
 
       if (autopilotStopFlags[autopilotIndex]) {
-        const stopsReached = autopilotStopFlags.slice(0, autopilotIndex + 1).filter(Boolean).length;
+        autopilotStopsReached++; // reveal this stop's predicted-order badge
         const subEl = document.getElementById('motorSubstatus-' + autopilotTabId);
         if (subEl) {
-          subEl.textContent = stopsReached < predictedOrder.length
-            ? `Reached stop ${stopsReached} of ${predictedOrder.length}`
+          subEl.textContent = autopilotStopsReached < predictedOrder.length
+            ? `Reached stop ${autopilotStopsReached} of ${predictedOrder.length}`
             : `Reached final stop (${predictedOrder.length} of ${predictedOrder.length})`;
         }
       }
+
+      draw();
+      driveRealMotor('stop');
 
       autopilotIndex++;
       advanceAutopilotLeg();
@@ -1507,8 +1512,9 @@
       drawOrderBadge(p.x - 10, p.y - 13, i + 1, '#38bdf8');
     });
 
-    // predicted-order badges (gold) — the model's suggested route
-    predictedOrder.forEach((p, i) => {
+    // predicted-order badges (gold) — revealed one at a time as the bus
+    // actually drives past each stop, rather than all up front
+    predictedOrder.slice(0, autopilotStopsReached).forEach((p, i) => {
       drawOrderBadge(p.x + 10, p.y - 13, i + 1, '#facc15');
     });
 
@@ -1770,6 +1776,7 @@
     resetRobotPositionOnly();
     routeTrail = [{ x: robotX, y: robotY }];
     autopilotTrail = [];
+    autopilotStopsReached = 0;
     currentlyNearStops = new Set();
     draw();
   }
@@ -2034,7 +2041,7 @@
   // if it over-shoots. A short safety timeout backs it up in case the
   // motor doesn't report completion.
   const TURN_DEGREES = 150;
-  const TURN_SAFETY_TIMEOUT_MS = 1500;
+  const TURN_SAFETY_TIMEOUT_MS = 800;
 
   function driveRealTurn(turnDir) {
     if (!writeChar) return;
