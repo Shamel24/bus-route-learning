@@ -1912,8 +1912,6 @@
     }
   }
 
-  const CONTINUOUS_DRIVE_DELTA = 100000; // large tick count so it drives "indefinitely" until Stop
-
   // Motor 2 is physically mounted/wired facing the opposite direction from
   // motor 1 (confirmed on real hardware: sending both the same "positive"
   // speed drove one forward and the other backward), so its sign is flipped
@@ -1921,28 +1919,26 @@
   // of "both wheels agreeing," so this is the one place the correction lives.
   const MOTOR_2_INVERT = -1;
 
-  function sendMotorPowerPair(powerA, powerB, delta) {
-    const speeds = [powerA, powerB * MOTOR_2_INVERT];
-    for (const [mask, speed] of [[1, speeds[0]], [2, speeds[1]]]) {
-      const d = speed >= 0 ? delta : -delta;
-      sendBytes(concatBytes([motorSetSpeed(mask, speed), motorRunToRel(mask, d)]));
-    }
-  }
-
   function stopRealMotor() {
     sendBytes(motorStopMsg(1));
     sendBytes(motorStopMsg(2));
   }
 
+  // Drives continuously in a direction using the motor's native "run until
+  // stopped" command — replacing an earlier workaround (Run-To-Relative-
+  // Position with an arbitrarily huge target) that turned out to cause
+  // unreliable disconnects, confirmed across multiple physical motor units.
   function driveRealMotor(dir) {
     if (!writeChar) return;
     if (dir === 'stop') { stopRealMotor(); return; }
     const POWER = { forward: [70, 70], backward: [-70, -70] }[dir];
     if (!POWER) return;
-    // Speed alone only sets a register — Run-To-Relative-Position is what
-    // actually triggers movement, so both are sent together per motor,
-    // driving a large distance in the commanded direction.
-    sendMotorPowerPair(POWER[0], POWER[1], CONTINUOUS_DRIVE_DELTA);
+    const speeds = [POWER[0], POWER[1] * MOTOR_2_INVERT];
+    for (const [mask, signedSpeed] of [[1, speeds[0]], [2, speeds[1]]]) {
+      const magnitude = Math.abs(signedSpeed);
+      const direction = signedSpeed >= 0 ? DIRECTION_CLOCKWISE : DIRECTION_COUNTERCLOCKWISE;
+      sendBytes(concatBytes([motorSetSpeed(mask, magnitude), motorRun(mask, direction)]));
+    }
   }
 
   // A 90° pivot at an intersection, now using the motor's native
