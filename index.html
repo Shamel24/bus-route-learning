@@ -697,6 +697,12 @@
   const ROADS_V = [0.04, 0.15, 0.38, 0.6, 0.82, 0.96].map(f => f * CW);
   const INTERSECTION_TOLERANCE = 14; // px — how close counts as "at" an intersection
 
+  // The road network's own outer bounds — the bus (and anywhere it can be
+  // sent, like a store pin) must never go beyond the outermost road, or it
+  // would visibly leave the drawn streets rather than just staying on-canvas.
+  const ROAD_MIN_X = ROADS_V[0], ROAD_MAX_X = ROADS_V[ROADS_V.length - 1];
+  const ROAD_MIN_Y = ROADS_H[0], ROAD_MAX_Y = ROADS_H[ROADS_H.length - 1];
+
   let points = [];        // {x, y, label}  label = class index
   let currentClass = 0;
   let visitedRoute = [];  // ordered array of point objects, recorded as the bus drives past them
@@ -1030,16 +1036,15 @@
   }
 
   const ROAD_SNAP_TOLERANCE = 20; // px — how close a click needs to be to a road to place a store
-  const ROBOT_EDGE_MARGIN = 14; // px — keeps the bus marker fully on-canvas at every intersection and stop
 
   // Finds the closest point directly on the road network to (x, y). The
   // "free" coordinate (whichever axis isn't snapped to a road) is clamped to
-  // stay within ROBOT_EDGE_MARGIN of the edge — otherwise a store placed
-  // near the canvas border would later pull the bus marker there too during
-  // autopilot, clipping part of it off-canvas.
+  // the road network's own bounds — otherwise a store placed near the
+  // canvas border would sit past the outermost road, later pulling the bus
+  // there too during autopilot and off the drawn streets entirely.
   function nearestRoadPoint(x, y) {
-    const freeX = Math.max(ROBOT_EDGE_MARGIN, Math.min(CW - ROBOT_EDGE_MARGIN, x));
-    const freeY = Math.max(ROBOT_EDGE_MARGIN, Math.min(CH - ROBOT_EDGE_MARGIN, y));
+    const freeX = Math.max(ROAD_MIN_X, Math.min(ROAD_MAX_X, x));
+    const freeY = Math.max(ROAD_MIN_Y, Math.min(ROAD_MAX_Y, y));
     let best = null;
     for (const h of ROADS_H) {
       const dist = Math.abs(h - y);
@@ -1706,8 +1711,8 @@
     else if (robotFacing === 'down') robotY += dist;
     else if (robotFacing === 'left') robotX -= dist;
     else if (robotFacing === 'right') robotX += dist;
-    robotX = Math.max(ROBOT_EDGE_MARGIN, Math.min(CW - ROBOT_EDGE_MARGIN, robotX));
-    robotY = Math.max(ROBOT_EDGE_MARGIN, Math.min(CH - ROBOT_EDGE_MARGIN, robotY));
+    robotX = Math.max(ROAD_MIN_X, Math.min(ROAD_MAX_X, robotX));
+    robotY = Math.max(ROAD_MIN_Y, Math.min(ROAD_MAX_Y, robotY));
   }
 
   const STOP_VISIT_TOLERANCE = 16; // px — how close the bus needs to pass to "reach" a store
