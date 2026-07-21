@@ -1,0 +1,2108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Machine Learning Types</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --panel: #171a23;
+    --border: #2a2e3a;
+    --accent: #6c8cff;
+    --accent2: #ff8c6c;
+    --text: #e8e9ee;
+    --muted: #9a9fae;
+    --green: #4ade80;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 980px;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 1.8rem;
+    margin-bottom: 24px;
+    font-weight: 600;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 8px;
+    background: var(--panel);
+    padding: 6px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+
+  .tab-btn {
+    flex: 1;
+    padding: 14px 20px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .tab-btn:hover {
+    color: var(--text);
+  }
+
+  .tab-btn.active {
+    background: var(--accent);
+    color: white;
+  }
+
+  .tab-btn.active.unsupervised {
+    background: var(--accent2);
+  }
+
+  .panel {
+    margin-top: 20px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    display: none;
+  }
+
+  .panel.active {
+    display: block;
+  }
+
+  .panel h2 {
+    margin-top: 0;
+    font-size: 1.3rem;
+  }
+
+  .panel p {
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .panel ul {
+    color: var(--text);
+    line-height: 1.8;
+    padding-left: 20px;
+  }
+
+  .tag {
+    display: inline-block;
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: rgba(108, 140, 255, 0.15);
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+
+  .panel.unsupervised .tag {
+    background: rgba(255, 140, 108, 0.15);
+    color: var(--accent2);
+  }
+
+  /* ---- trainer widget shared styles ---- */
+  .trainer {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+
+  .trainer h3 {
+    margin: 0 0 6px 0;
+    font-size: 1.05rem;
+  }
+
+  .trainer .hint {
+    color: var(--muted);
+    font-size: 0.88rem;
+    margin: 0 0 16px 0;
+    line-height: 1.5;
+  }
+
+  .label-names {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+
+  .label-names input {
+    flex: 1;
+    min-width: 100px;
+    background: #0b0d13;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    color: var(--text);
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-left-width: 3px;
+    border-left-style: solid;
+  }
+
+  .class-select {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+
+  .class-btn {
+    flex: 1;
+    min-width: 120px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 2px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.15s ease;
+    font-size: 0.88rem;
+  }
+
+  .class-btn .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .class-btn.selected { background: rgba(255,255,255,0.06); }
+
+  .route-log-wrap {
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: #0b0d13;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .route-log-label {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .route-log {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--muted);
+    min-height: 20px;
+  }
+
+  .route-log .stop-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 9px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: #0b0d13;
+  }
+
+  .route-log .arrow {
+    color: var(--border);
+    font-weight: 700;
+  }
+
+  #canvas-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  #mapCanvas {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    display: block;
+    background: #0b0d13;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: crosshair;
+  }
+
+  .trainer-controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+
+  .trainer-controls button {
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+
+  #trainBtn { background: var(--accent); color: white; }
+  #trainBtn:disabled { background: #3a3f4f; color: var(--muted); cursor: not-allowed; }
+  #clearBtn, #undoBtn { background: transparent; color: var(--muted); border: 1px solid var(--border) !important; }
+
+  .status-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    font-size: 0.85rem;
+    color: var(--muted);
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .counts-row {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .count-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .count-chip .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  #routeModelStatus {
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  #routeModelStatus.trained { color: var(--green); }
+
+  #predictRouteBtn { background: #a78bfa; color: white; }
+  #predictRouteBtn:disabled { background: #3a3f4f; color: var(--muted); cursor: not-allowed; }
+
+  #predictResult {
+    margin-top: 10px;
+    font-size: 0.85rem;
+    color: var(--text);
+    min-height: 18px;
+  }
+
+  #predictResult .predicted-label {
+    font-weight: 700;
+  }
+
+  /* ---- side-by-side map + motor control layout (Supervised tab) ---- */
+  .map-motor-row {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    margin-top: 4px;
+  }
+
+  .map-column {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .motor-column {
+    flex: 1;
+    min-width: 260px;
+    padding: 18px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+
+  .motor-column h3 {
+    margin: 0 0 6px 0;
+    font-size: 1.05rem;
+  }
+
+  .motor-column .hint {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin: 0 0 16px 0;
+    line-height: 1.5;
+  }
+
+  /* ---- LEGO motor control panel (Unsupervised tab only) ---- */
+  .motor-panel {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+
+  .motor-panel h3 {
+    margin: 0 0 6px 0;
+    font-size: 1.05rem;
+  }
+
+  .motor-panel .hint {
+    color: var(--muted);
+    font-size: 0.88rem;
+    margin: 0 0 16px 0;
+    line-height: 1.5;
+  }
+
+  .motor-widget {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    flex-wrap: wrap;
+  }
+
+  .dpad {
+    display: grid;
+    grid-template-columns: 52px 52px 52px;
+    grid-template-rows: 52px 52px 52px;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .dpad button {
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: #0b0d13;
+    color: var(--text);
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.12s ease;
+  }
+
+  .dpad button:hover { border-color: var(--accent); }
+
+  .dpad button.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  .dpad .fwd { grid-column: 2; grid-row: 1; }
+  .dpad .left { grid-column: 1; grid-row: 2; }
+  .dpad .stop { grid-column: 2; grid-row: 2; background: #2a1418; border-color: #7a2b34; color: #ff8080; }
+  .dpad .stop.active { background: #7a2b34; color: white; }
+  .dpad .right { grid-column: 3; grid-row: 2; }
+  .dpad .back { grid-column: 2; grid-row: 3; }
+
+  .motor-readout {
+    flex: 1;
+    min-width: 160px;
+  }
+
+  .motor-icon-wrap {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: #0b0d13;
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+  }
+
+  .motor-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .motor-icon svg { width: 100%; height: 100%; }
+
+  .motor-icon.spin-cw { animation: spin-cw 0.9s linear infinite; }
+  .motor-icon.spin-ccw { animation: spin-ccw 0.9s linear infinite; }
+  .motor-icon.spin-slow-cw { animation: spin-cw 1.6s linear infinite; }
+  .motor-icon.spin-slow-ccw { animation: spin-ccw 1.6s linear infinite; }
+
+  @keyframes spin-cw { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes spin-ccw { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+
+  .motor-status {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+  }
+
+  .motor-status.moving { color: var(--green); }
+
+  .motor-substatus {
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+
+  .ble-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--border);
+    flex-wrap: wrap;
+  }
+
+  .ble-connect-btn {
+    padding: 9px 14px;
+    border-radius: 8px;
+    border: 1px solid #3b82f6;
+    background: rgba(59, 130, 246, 0.12);
+    color: #93b8ff;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .ble-connect-btn:hover { background: rgba(59, 130, 246, 0.22); }
+
+  .ble-connect-btn.connected {
+    border-color: var(--green);
+    background: rgba(74, 222, 128, 0.12);
+    color: var(--green);
+  }
+
+  .ble-status-text {
+    font-size: 0.8rem;
+    color: var(--muted);
+    flex: 1;
+    min-width: 160px;
+  }
+
+  .ble-uuid-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .ble-uuid-row label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 3px;
+  }
+
+  .ble-uuid-field {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .ble-uuid-field input {
+    width: 100%;
+    background: #0b0d13;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 8px;
+    color: var(--text);
+    font-size: 0.75rem;
+    font-family: ui-monospace, monospace;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Machine Learning</h1>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="btn-supervised" onclick="showTab('supervised')">Supervised Learning</button>
+    <button class="tab-btn" id="btn-unsupervised" onclick="showTab('unsupervised')">Unsupervised Learning</button>
+  </div>
+
+  <div class="panel active" id="panel-supervised">
+    <span class="tag">Labeled Data</span>
+    <h2>Supervised Learning</h2>
+    <p>The model learns from labeled examples, mapping inputs to known outputs so it can predict labels for new, unseen data.</p>
+    <ul>
+      <li>Requires labeled training data</li>
+      <li>Common tasks: classification, regression</li>
+      <li>Examples: spam detection, price prediction, image recognition</li>
+      <li>Algorithms: Linear Regression, Decision Trees, SVM, Neural Networks</li>
+    </ul>
+
+    <div class="trainer">
+      <h3>Try it: drive the bus, and let it learn your route</h3>
+      <p class="hint">Rename the store types if you like, pick one, and click along the streets to drop labeled store pins. Then drive the bus with the D-pad — every store it passes gets recorded, in order, as your demonstrated route. Once you've visited a few stops, train the model: it learns a rule connecting store type + location to visit order, so it can suggest a route for <em>any</em> set of stops, including ones you never drove to yourself.</p>
+
+      <div class="label-names" id="labelNames"></div>
+
+      <div class="class-select" id="classSelect"></div>
+
+      <div class="map-motor-row">
+        <div class="map-column">
+          <div id="canvas-wrap">
+            <canvas id="mapCanvas" width="480" height="360"></canvas>
+          </div>
+
+          <div class="status-row">
+            <div class="counts-row" id="countsRow"></div>
+            <button onclick="resetRobotPosition()" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;">📍 Reset Bus Position</button>
+          </div>
+        </div>
+
+        <div class="motor-column">
+          <h3>LEGO Motor Control</h3>
+          <p class="hint">Drive the bus with the D-pad — forward, backward, and turns. Runs as a visual simulation by default; click "Connect Real Motor" to pair over Bluetooth (Chrome/Edge, needs https:// or localhost).</p>
+          <div class="motor-widget">
+            <div class="dpad">
+              <button class="fwd" data-dir="forward" onclick="setMotorDir('supervised','forward')" title="Forward">▲</button>
+              <button class="left" data-dir="left" onclick="setMotorDir('supervised','left')" title="Left turn">◀</button>
+              <button class="stop" data-dir="stop" onclick="setMotorDir('supervised','stop')" title="Stop">■</button>
+              <button class="right" data-dir="right" onclick="setMotorDir('supervised','right')" title="Right turn">▶</button>
+              <button class="back" data-dir="backward" onclick="setMotorDir('supervised','backward')" title="Backward">▼</button>
+            </div>
+            <div class="motor-readout">
+              <div class="motor-icon-wrap">
+                <div class="motor-icon" id="motorIcon-supervised">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="3" fill="#9a9fae"/>
+                    <rect x="11" y="1" width="2" height="6" rx="1" fill="#9a9fae"/>
+                    <rect x="11" y="17" width="2" height="6" rx="1" fill="#9a9fae"/>
+                    <rect x="1" y="11" width="6" height="2" rx="1" fill="#9a9fae"/>
+                    <rect x="17" y="11" width="6" height="2" rx="1" fill="#9a9fae"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="motor-status" id="motorStatus-supervised">Stopped</div>
+              <div class="motor-substatus" id="motorSubstatus-supervised">Double motor idle</div>
+            </div>
+          </div>
+          <div class="ble-row">
+            <button class="ble-connect-btn" id="bleConnectBtn-supervised" onclick="connectMotorBluetooth()">🔵 Connect Real Motor</button>
+            <span class="ble-status-text" id="bleStatusText-supervised">Not connected — driving the visual simulation only</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="route-log-wrap">
+        <div class="route-log-label">🚌 Route so far (drive the bus below to build this):</div>
+        <div id="routeLog" class="route-log">No stops visited yet — drive the bus to a store pin.</div>
+        <button id="clearRouteBtn" onclick="clearRoute()" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;margin-top:8px;">Clear Route</button>
+      </div>
+
+      <div class="status-row">
+        <span id="routeModelStatus">Not trained</span>
+      </div>
+
+      <div id="predictResult"></div>
+
+      <div class="trainer-controls">
+        <button id="trainBtn" onclick="trainRouteModel()" disabled>Train Route Model</button>
+        <button id="predictRouteBtn" onclick="predictRoute()" disabled>Predict Route</button>
+        <button id="undoBtn" onclick="undoPoint()">Undo Pin</button>
+        <button id="clearBtn" onclick="clearPoints()">Clear All Pins</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel unsupervised" id="panel-unsupervised">
+    <span class="tag">Unlabeled Data</span>
+    <h2>Unsupervised Learning</h2>
+    <p>The model works with unlabeled data, finding hidden patterns or groupings on its own without predefined answers.</p>
+    <ul>
+      <li>No labeled training data required</li>
+      <li>Common tasks: clustering, dimensionality reduction</li>
+      <li>Examples: customer segmentation, anomaly detection, topic modeling</li>
+      <li>Algorithms: K-Means, Hierarchical Clustering, PCA, Autoencoders</li>
+    </ul>
+
+    <div class="motor-panel">
+      <h3>LEGO Motor Control</h3>
+      <p class="hint">Drive the LEGO Education double motor — forward, backward, and turns. Runs as a visual simulation by default; click "Connect Real Motor" to pair over Bluetooth (Chrome/Edge, needs https:// or localhost).</p>
+      <div class="motor-widget">
+        <div class="dpad">
+          <button class="fwd" data-dir="forward" onclick="setMotorDir('unsupervised','forward')" title="Forward">▲</button>
+          <button class="left" data-dir="left" onclick="setMotorDir('unsupervised','left')" title="Left turn">◀</button>
+          <button class="stop" data-dir="stop" onclick="setMotorDir('unsupervised','stop')" title="Stop">■</button>
+          <button class="right" data-dir="right" onclick="setMotorDir('unsupervised','right')" title="Right turn">▶</button>
+          <button class="back" data-dir="backward" onclick="setMotorDir('unsupervised','backward')" title="Backward">▼</button>
+        </div>
+        <div class="motor-readout">
+          <div class="motor-icon-wrap">
+            <div class="motor-icon" id="motorIcon-unsupervised">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="3" fill="#9a9fae"/>
+                <rect x="11" y="1" width="2" height="6" rx="1" fill="#9a9fae"/>
+                <rect x="11" y="17" width="2" height="6" rx="1" fill="#9a9fae"/>
+                <rect x="1" y="11" width="6" height="2" rx="1" fill="#9a9fae"/>
+                <rect x="17" y="11" width="6" height="2" rx="1" fill="#9a9fae"/>
+              </svg>
+            </div>
+          </div>
+          <div class="motor-status" id="motorStatus-unsupervised">Stopped</div>
+          <div class="motor-substatus" id="motorSubstatus-unsupervised">Double motor idle</div>
+        </div>
+      </div>
+      <div class="ble-row">
+        <button class="ble-connect-btn" id="bleConnectBtn-unsupervised" onclick="connectMotorBluetooth()">🔵 Connect Real Motor</button>
+        <span class="ble-status-text" id="bleStatusText-unsupervised">Not connected — driving the visual simulation only</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function showTab(name) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('btn-' + name).classList.add('active');
+    document.getElementById('panel-' + name).classList.add('active');
+  }
+
+  // ---- Supervised learning demo: label store locations on a map + train a model ----
+
+  const CLASS_COLORS = ['#6c8cff', '#ffb86c', '#4ade80', '#f472b6', '#facc15', '#38bdf8', '#a78bfa', '#fb7185'];
+  const MAX_CLASSES = CLASS_COLORS.length;
+  const MIN_CLASSES = 2;
+  let names = ['Pizza Place', 'Grocery Store', 'Craft Store'];
+
+  const canvas = document.getElementById('mapCanvas');
+  const ctx = canvas.getContext('2d');
+  const CW = canvas.width, CH = canvas.height;
+
+  // Fixed road network — a handful of horizontal/vertical "streets" the
+  // motor is constrained to drive along.
+  const ROADS_H = [0.18, 0.42, 0.63, 0.86].map(f => f * CH);
+  const ROADS_V = [0.15, 0.38, 0.6, 0.82].map(f => f * CW);
+  const INTERSECTION_TOLERANCE = 14; // px — how close counts as "at" an intersection
+
+  let points = [];        // {x, y, label}  label = class index
+  let currentClass = 0;
+  let visitedRoute = [];  // ordered array of point objects, recorded as the bus drives past them
+  let predictedOrder = []; // ordered array of point objects, from the model's most recent route prediction
+  let routeModel = null;   // { W: [...], b, numClasses } — trained on visitedRoute
+
+  // Live motor position on the map, constrained to the road network: the
+  // motor always sits exactly on a road, facing one of 4 cardinal
+  // directions, and can only turn 90° when it's at an intersection.
+  let robotX = ROADS_V[1];
+  let robotY = ROADS_H[1];
+  let robotFacing = 'right'; // 'up' | 'down' | 'left' | 'right'
+  let currentDriveDir = 'stop';
+  let driveAnimFrame = null;
+  let lastFrameTime = null;
+  let writeChar = null; // set once the real motor is connected over Bluetooth
+  let pendingTurn = null; // 'left' | 'right' | null — queued to fire once the next intersection is reached
+  let pendingTurnTabId = 'supervised'; // which tab's UI to update when the queued turn actually fires
+  let activeDriveTabId = 'supervised'; // which tab's UI to update when auto-stopping at an intersection
+  let departedIntersection = true; // false right after starting a drive, until clear of the starting intersection
+  // The bus's actual driven path — a fixed waypoint is added every time it
+  // stops or turns (a "corner"), and the live current position extends the
+  // last segment each frame while driving, so the line grows continuously.
+  let routeTrail = [{ x: robotX, y: robotY }];
+  const ROBOT_LINEAR_SPEED = 70; // px/sec
+  const FACING_ORDER = ['up', 'right', 'down', 'left']; // clockwise
+  const FACING_ANGLE = { up: 0, right: Math.PI / 2, down: Math.PI, left: -Math.PI / 2 };
+
+  function nearestValue(v, arr) {
+    return arr.reduce((best, cur) => Math.abs(cur - v) < Math.abs(best - v) ? cur : best);
+  }
+
+  // Since every store pin is snapped onto a road when placed, this finds
+  // which single road (and its fixed coordinate) a point sits on.
+  function roadInfoFor(p) {
+    const hMatch = ROADS_H.find(h => Math.abs(h - p.y) < 0.5);
+    if (hMatch !== undefined) return { axis: 'h', coord: hMatch };
+    const vMatch = ROADS_V.find(v => Math.abs(v - p.x) < 0.5);
+    if (vMatch !== undefined) return { axis: 'v', coord: vMatch };
+    return null; // shouldn't happen for a properly snapped pin
+  }
+
+  // Builds a sequence of points forming an on-road path from a to b —
+  // straight along a shared road, an "L" via one intersection when they're
+  // on crossing roads, or a "Z" via a connecting road when they're on two
+  // parallel roads.
+  function roadPathBetween(a, b) {
+    const ra = roadInfoFor(a), rb = roadInfoFor(b);
+    if (!ra || !rb) return [a, b];
+
+    if (ra.axis === rb.axis && ra.coord === rb.coord) {
+      return [a, b]; // same road
+    }
+    if (ra.axis === 'h' && rb.axis === 'v') {
+      return [a, { x: rb.coord, y: ra.coord }, b];
+    }
+    if (ra.axis === 'v' && rb.axis === 'h') {
+      return [a, { x: ra.coord, y: rb.coord }, b];
+    }
+    if (ra.axis === 'h' && rb.axis === 'h') {
+      const midX = nearestValue((a.x + b.x) / 2, ROADS_V);
+      return [a, { x: midX, y: ra.coord }, { x: midX, y: rb.coord }, b];
+    }
+    // ra.axis === 'v' && rb.axis === 'v'
+    const midY = nearestValue((a.y + b.y) / 2, ROADS_H);
+    return [a, { x: ra.coord, y: midY }, { x: rb.coord, y: midY }, b];
+  }
+
+  // Draws a route as a connected on-road path through an ordered list of stops.
+  // Draws a route as a solid, continuous on-road path through an ordered
+  // list of stops — every corner lies on a real intersection, so this is a
+  // path a real bus could actually drive turn-by-turn. Arrowheads along the
+  // way show the direction of travel.
+  function drawRoutePath(orderedPoints, color, dashed) {
+    if (orderedPoints.length < 2) return;
+
+    // Flatten into one continuous list of waypoints (shared corners aren't
+    // duplicated), so the whole route renders as a single connected path.
+    const waypoints = [orderedPoints[0]];
+    for (let i = 0; i < orderedPoints.length - 1; i++) {
+      const seg = roadPathBetween(orderedPoints[i], orderedPoints[i + 1]);
+      for (let j = 1; j < seg.length; j++) waypoints.push(seg[j]);
+    }
+
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    if (dashed) ctx.setLineDash([7, 6]);
+    ctx.beginPath();
+    ctx.moveTo(waypoints[0].x, waypoints[0].y);
+    for (let i = 1; i < waypoints.length; i++) ctx.lineTo(waypoints[i].x, waypoints[i].y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    // Direction arrows at the midpoint of each leg, showing which way a bus
+    // following this route would be driving.
+    for (let i = 0; i < waypoints.length - 1; i++) {
+      drawDirectionArrow(waypoints[i], waypoints[i + 1], color);
+    }
+  }
+
+  function drawDirectionArrow(from, to, color) {
+    const mx = (from.x + to.x) / 2, my = (from.y + to.y) / 2;
+    const len = Math.hypot(to.x - from.x, to.y - from.y);
+    if (len < 12) return; // too short a leg to bother drawing an arrow
+    const angle = Math.atan2(to.y - from.y, to.x - from.x);
+    ctx.save();
+    ctx.translate(mx, my);
+    ctx.rotate(angle);
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#0b0d13';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(7, 0);
+    ctx.lineTo(-4, 5);
+    ctx.lineTo(-4, -5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Draws the bus's actual driven path: the fixed corner waypoints, plus a
+  // live segment extending to the current position while it's moving —
+  // this is what makes the line grow continuously behind the bus as it drives.
+  function drawTrailPath() {
+    const pts = routeTrail.slice();
+    if (currentDriveDir === 'forward' || currentDriveDir === 'backward') {
+      pts.push({ x: robotX, y: robotY });
+    }
+    if (pts.length < 2) return;
+    ctx.save();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function isAtIntersection(x, y) {
+    const nearV = ROADS_V.some(v => Math.abs(v - x) <= INTERSECTION_TOLERANCE);
+    const nearH = ROADS_H.some(h => Math.abs(h - y) <= INTERSECTION_TOLERANCE);
+    return nearV && nearH;
+  }
+
+  // Attempts a 90° turn — only succeeds at an intersection, snapping the
+  // marker exactly onto the crossing roads. Returns whether it turned.
+  function attemptTurn(turnDir) {
+    if (!isAtIntersection(robotX, robotY)) return false;
+    robotX = nearestValue(robotX, ROADS_V);
+    robotY = nearestValue(robotY, ROADS_H);
+    const idx = FACING_ORDER.indexOf(robotFacing);
+    robotFacing = turnDir === 'right' ? FACING_ORDER[(idx + 1) % 4] : FACING_ORDER[(idx + 3) % 4];
+    return true;
+  }
+
+  function classNames() {
+    return names.map((n, i) => {
+      const el = document.getElementById('nameInput' + i);
+      return (el && el.value.trim()) || n;
+    });
+  }
+
+  function syncNamesFromInputs() {
+    names = classNames();
+  }
+
+  function buildLabelInputs() {
+    const wrap = document.getElementById('labelNames');
+    wrap.innerHTML = '';
+    names.forEach((name, i) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:4px;min-width:100px;flex:1;';
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.id = 'nameInput' + i;
+      input.value = name;
+      input.maxLength = 20;
+      input.style.borderLeftColor = CLASS_COLORS[i];
+      input.style.flex = '1';
+      input.addEventListener('input', renderLabels);
+      row.appendChild(input);
+
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.textContent = '×';
+      delBtn.title = 'Delete this store type';
+      delBtn.onclick = () => deleteStoreType(i);
+      delBtn.style.cssText = 'flex-shrink:0;width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:1rem;line-height:1;cursor:pointer;';
+      if (names.length <= MIN_CLASSES) {
+        delBtn.disabled = true;
+        delBtn.style.opacity = '0.3';
+        delBtn.style.cursor = 'not-allowed';
+        delBtn.title = `At least ${MIN_CLASSES} store types are required`;
+      }
+      row.appendChild(delBtn);
+
+      wrap.appendChild(row);
+    });
+
+    const addBtn = document.createElement('button');
+    addBtn.id = 'addTypeBtn';
+    addBtn.type = 'button';
+    addBtn.textContent = '+ Add Store Type';
+    addBtn.onclick = addStoreType;
+    addBtn.style.cssText = 'padding:8px 14px;border-radius:8px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-weight:600;font-size:0.85rem;cursor:pointer;white-space:nowrap;';
+    if (names.length >= MAX_CLASSES) addBtn.disabled = true, addBtn.style.opacity = '0.4', addBtn.style.cursor = 'not-allowed';
+    wrap.appendChild(addBtn);
+  }
+
+  function addStoreType() {
+    if (names.length >= MAX_CLASSES) return;
+    syncNamesFromInputs();
+    names.push('Store Type ' + (names.length + 1));
+    rebuildClassUI();
+    disableRouteModelUi();
+    updateStatus();
+    draw();
+  }
+
+  function deleteStoreType(i) {
+    if (names.length <= MIN_CLASSES) return;
+    syncNamesFromInputs();
+    names.splice(i, 1);
+
+    // drop points that belonged to the deleted type, and shift labels above it down by one
+    points = points
+      .filter(p => p.label !== i)
+      .map(p => p.label > i ? { ...p, label: p.label - 1 } : p);
+
+    // reindexing creates new point objects, so any recorded/predicted route
+    // referencing the old ones is now stale — clear it out.
+    visitedRoute = [];
+    predictedOrder = [];
+    renderRouteLog();
+    rebuildClassUI();
+    disableRouteModelUi();
+    updateStatus();
+    draw();
+  }
+
+  function rebuildClassUI() {
+    buildLabelInputs();
+    buildClassButtons();
+    buildCountsRow();
+    setClass(Math.min(currentClass, names.length - 1));
+  }
+
+  function buildClassButtons() {
+    const wrap = document.getElementById('classSelect');
+    wrap.innerHTML = '';
+    names.forEach((name, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'class-btn' + (i === currentClass ? ' selected' : '');
+      btn.id = 'classBtn' + i;
+      btn.dataset.class = i;
+      btn.onclick = () => setClass(i);
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      dot.style.background = CLASS_COLORS[i];
+      const label = document.createElement('span');
+      label.id = 'classBtnLabel' + i;
+      label.textContent = name;
+      btn.appendChild(dot);
+      btn.appendChild(label);
+      wrap.appendChild(btn);
+    });
+  }
+
+  function buildCountsRow() {
+    const wrap = document.getElementById('countsRow');
+    wrap.innerHTML = '';
+    names.forEach((name, i) => {
+      const chip = document.createElement('span');
+      chip.className = 'count-chip';
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      dot.style.background = CLASS_COLORS[i];
+      const label = document.createElement('span');
+      label.id = 'countLabel' + i;
+      label.textContent = name + ': ';
+      const count = document.createElement('span');
+      count.id = 'count' + i;
+      count.textContent = points.filter(p => p.label === i).length;
+      chip.appendChild(dot);
+      chip.appendChild(label);
+      chip.appendChild(count);
+      wrap.appendChild(chip);
+    });
+  }
+
+  function renderLabels() {
+    const currentNames = classNames();
+    currentNames.forEach((name, i) => {
+      const btnLabel = document.getElementById('classBtnLabel' + i);
+      const countLabel = document.getElementById('countLabel' + i);
+      if (btnLabel) btnLabel.textContent = name;
+      if (countLabel) countLabel.textContent = name + ': ';
+    });
+  }
+
+  function setClass(c) {
+    currentClass = c;
+    names.forEach((_, i) => {
+      const btn = document.getElementById('classBtn' + i);
+      if (btn) btn.classList.toggle('selected', i === c);
+    });
+  }
+
+  const ROAD_SNAP_TOLERANCE = 20; // px — how close a click needs to be to a road to place a store
+
+  // Finds the closest point directly on the road network to (x, y).
+  function nearestRoadPoint(x, y) {
+    let best = null;
+    for (const h of ROADS_H) {
+      const dist = Math.abs(h - y);
+      if (!best || dist < best.dist) best = { x, y: h, dist };
+    }
+    for (const v of ROADS_V) {
+      const dist = Math.abs(v - x);
+      if (!best || dist < best.dist) best = { x: v, y, dist };
+    }
+    return best;
+  }
+
+  canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = CW / rect.width;
+    const scaleY = CH / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+
+    const snap = nearestRoadPoint(x, y);
+    if (snap.dist > ROAD_SNAP_TOLERANCE) {
+      const resultEl = document.getElementById('predictResult');
+      if (resultEl) {
+        resultEl.textContent = 'Click closer to a road to place a store.';
+        clearTimeout(nearestRoadPoint._msgTimer);
+        nearestRoadPoint._msgTimer = setTimeout(() => { resultEl.textContent = ''; }, 1500);
+      }
+      return;
+    }
+    points.push({ x: snap.x, y: snap.y, label: currentClass });
+    // A new pin doesn't invalidate a trained model (it's parameterized by
+    // type + location, not a fixed point set) — but any previously
+    // displayed predicted route is now missing this stop, so clear it.
+    predictedOrder = [];
+    const resultEl = document.getElementById('predictResult');
+    if (resultEl) resultEl.innerHTML = '';
+    updateStatus();
+    draw();
+  });
+
+  function undoPoint() {
+    if (autopilotActive) { stopAutopilot(); driveRealMotor('stop'); }
+    const removed = points.pop();
+    if (removed) {
+      visitedRoute = visitedRoute.filter(p => p !== removed);
+      predictedOrder = predictedOrder.filter(p => p !== removed);
+    }
+    renderRouteLog();
+    disableRouteModelUi();
+    updateStatus();
+    draw();
+  }
+
+  function clearPoints() {
+    if (autopilotActive) { stopAutopilot(); driveRealMotor('stop'); }
+    points = [];
+    visitedRoute = [];
+    predictedOrder = [];
+    routeTrail = [{ x: robotX, y: robotY }];
+    renderRouteLog();
+    disableRouteModelUi();
+    updateStatus();
+    draw();
+  }
+
+  function clearRoute() {
+    if (autopilotActive) { stopAutopilot(); driveRealMotor('stop'); }
+    visitedRoute = [];
+    predictedOrder = [];
+    routeTrail = [{ x: robotX, y: robotY }];
+    renderRouteLog();
+    disableRouteModelUi();
+    updateStatus();
+    draw();
+  }
+
+  function disableRouteModelUi() {
+    routeModel = null;
+    const status = document.getElementById('routeModelStatus');
+    if (status) { status.textContent = 'Not trained'; status.classList.remove('trained'); }
+    const predictBtn = document.getElementById('predictRouteBtn');
+    if (predictBtn) predictBtn.disabled = true;
+    const resultEl = document.getElementById('predictResult');
+    if (resultEl) resultEl.innerHTML = '';
+  }
+
+  function updateStatus() {
+    const numClasses = names.length;
+    for (let c = 0; c < numClasses; c++) {
+      const n = points.filter(p => p.label === c).length;
+      const el = document.getElementById('count' + c);
+      if (el) el.textContent = n;
+    }
+    const trainBtn = document.getElementById('trainBtn');
+    if (trainBtn) trainBtn.disabled = visitedRoute.length < 3;
+  }
+
+  // Renders the "route so far" chip list as the bus visits stops in order.
+  function renderRouteLog() {
+    const el = document.getElementById('routeLog');
+    if (!el) return;
+    if (visitedRoute.length === 0) {
+      el.textContent = 'No stops visited yet — drive the bus to a store pin.';
+      return;
+    }
+    const currentNames = classNames();
+    el.innerHTML = '';
+    visitedRoute.forEach((p, i) => {
+      if (i > 0) {
+        const arrow = document.createElement('span');
+        arrow.className = 'arrow';
+        arrow.textContent = '→';
+        el.appendChild(arrow);
+      }
+      const chip = document.createElement('span');
+      chip.className = 'stop-chip';
+      chip.style.background = CLASS_COLORS[p.label];
+      chip.textContent = `${i + 1}. ${currentNames[p.label] || 'Store'}`;
+      el.appendChild(chip);
+    });
+  }
+
+
+  function normalize(x, y) {
+    return [ (x / CW) * 2 - 1, (y / CH) * 2 - 1 ];
+  }
+
+  // Turns a store pin into a feature vector: one-hot store type + normalized
+  // location, plus a few interaction/curvature terms (x*y, x², y²) so the
+  // model can fit curved or zigzagging routes, not just a straight gradient
+  // across the map. This is what the route-order model actually learns from.
+  function buildFeatures(p) {
+    const numClasses = names.length;
+    const oneHot = Array(numClasses).fill(0);
+    oneHot[p.label] = 1;
+    const [nx, ny] = normalize(p.x, p.y);
+    return [...oneHot, nx, ny, nx * ny, nx * nx, ny * ny];
+  }
+
+  // ---- The AI model: linear regression, trained with gradient descent ----
+  // Learns to predict a stop's position in the route (as a 0..1 rank) from
+  // its store type + location, using the order the bus actually visited
+  // stops in as the training signal. Once trained, it can rank ANY set of
+  // stores — including ones never actually driven to — giving a suggested
+  // route order that stays as close as possible to how you actually drove.
+  function trainRouteModel() {
+    if (visitedRoute.length < 3) return;
+    const featLen = buildFeatures(visitedRoute[0]).length;
+    const data = visitedRoute.map((p, i) => ({
+      features: buildFeatures(p),
+      target: visitedRoute.length > 1 ? i / (visitedRoute.length - 1) : 0
+    }));
+
+    let W = new Array(featLen).fill(0);
+    let b = 0;
+    const lr = 0.3;
+    const epochs = 1500;
+
+    for (let e = 0; e < epochs; e++) {
+      const gradW = new Array(featLen).fill(0);
+      let gradB = 0;
+      for (const d of data) {
+        let pred = b;
+        for (let k = 0; k < featLen; k++) pred += W[k] * d.features[k];
+        const err = pred - d.target;
+        for (let k = 0; k < featLen; k++) gradW[k] += err * d.features[k];
+        gradB += err;
+      }
+      const n = data.length;
+      for (let k = 0; k < featLen; k++) W[k] -= lr * gradW[k] / n;
+      b -= lr * gradB / n;
+    }
+
+    routeModel = { W, b, numClasses: names.length };
+
+    const status = document.getElementById('routeModelStatus');
+    if (status) {
+      status.textContent = `Trained on your ${visitedRoute.length}-stop route`;
+      status.classList.add('trained');
+    }
+
+    const predictBtn = document.getElementById('predictRouteBtn');
+    if (predictBtn) predictBtn.disabled = false;
+
+    predictedOrder = [];
+    const resultEl = document.getElementById('predictResult');
+    if (resultEl) resultEl.innerHTML = '';
+
+    draw();
+  }
+
+  function predictRank(p) {
+    const feats = buildFeatures(p);
+    let pred = routeModel.b;
+    for (let k = 0; k < feats.length; k++) pred += routeModel.W[k] * feats[k];
+    return pred;
+  }
+
+  // Ranks every current store pin (visited or not) and shows the model's
+  // suggested visiting order.
+  // Ranks every stop, then groups stops that share a road together and
+  // visits each road's stops in one sweep — this is what keeps the route
+  // from doubling back over a street it's already been down. Groups are
+  // then ordered to alternate horizontal/vertical roads whenever possible:
+  // a transition between a horizontal and a vertical road can always turn
+  // directly at the intersection where they cross, using no other road —
+  // so alternating axes avoids ever needing a third "connector" road that
+  // could later collide with an unrelated stop (visited or brand new).
+  function predictRoute() {
+    if (!routeModel || points.length === 0) return;
+
+    const ranked = points.map(p => ({ p, rank: predictRank(p) }));
+
+    const groups = new Map(); // "h:0.18" / "v:0.15" -> [{p, rank}, ...]
+    for (const item of ranked) {
+      const info = roadInfoFor(item.p);
+      const key = info ? `${info.axis}:${info.coord}` : 'none';
+      if (!groups.has(key)) groups.set(key, { axis: info ? info.axis : null, items: [] });
+      groups.get(key).items.push(item);
+    }
+
+    const groupList = Array.from(groups.values()).map(g => ({
+      axis: g.axis,
+      items: g.items,
+      avgRank: g.items.reduce((s, it) => s + it.rank, 0) / g.items.length
+    }));
+    for (const g of groupList) g.items.sort((a, b) => a.rank - b.rank);
+
+    // Greedy walk: always prefer the best-ranked remaining group on the
+    // OPPOSITE axis from wherever we currently are, so consecutive legs
+    // alternate h/v and never need a borrowed connector road. Only fall
+    // back to a same-axis group if no opposite-axis option remains.
+    const remaining = groupList.slice().sort((a, b) => a.avgRank - b.avgRank);
+    const orderedGroups = [];
+    let current = remaining.shift();
+    orderedGroups.push(current);
+    while (remaining.length) {
+      let idx = remaining.findIndex(g => g.axis !== current.axis);
+      if (idx === -1) idx = 0;
+      current = remaining.splice(idx, 1)[0];
+      orderedGroups.push(current);
+    }
+
+    const ranked_final = orderedGroups.flatMap(g => g.items);
+    predictedOrder = ranked_final.map(r => r.p);
+
+    const currentNames = classNames();
+    const resultEl = document.getElementById('predictResult');
+    if (resultEl) {
+      resultEl.innerHTML = 'Predicted route: ' + ranked_final
+        .map((r, i) => `<span class="predicted-label" style="color:${CLASS_COLORS[r.p.label]}">${i + 1}. ${currentNames[r.p.label] || 'Store'}</span>`)
+        .join(' <span style="color:var(--muted)">→</span> ');
+    }
+
+    draw();
+    startAutopilotRoute('supervised');
+  }
+
+  // ---- Autopilot: automatically drives the predicted route, turn-by-turn,
+  // updating the simulated marker and the real motor (if connected) in sync.
+
+  let autopilotActive = false;
+  let autopilotWaypoints = [];
+  let autopilotStopFlags = [];
+  let autopilotIndex = 0;
+  let autopilotFrame = null;
+  let autopilotLastTime = null;
+  let autopilotTabId = 'supervised';
+
+  function facingNeededFor(from, to) {
+    const dx = to.x - from.x, dy = to.y - from.y;
+    if (Math.abs(dx) > Math.abs(dy)) return dx > 0 ? 'right' : 'left';
+    if (Math.abs(dy) > 0) return dy > 0 ? 'down' : 'up';
+    return robotFacing; // already there
+  }
+
+  function turnSequenceFor(current, target) {
+    if (current === target) return [];
+    const idxC = FACING_ORDER.indexOf(current);
+    const idxT = FACING_ORDER.indexOf(target);
+    const diff = (idxT - idxC + 4) % 4;
+    if (diff === 1) return ['right'];
+    if (diff === 3) return ['left'];
+    return ['right', 'right']; // 180°
+  }
+
+  // Chains the on-road path from the bus's current position through every
+  // predicted stop in order, so autopilot has a full turn-by-turn route to
+  // follow. Also marks which waypoints are actual stops vs. corner turns.
+  function buildAutopilotRoute() {
+    const waypoints = [{ x: robotX, y: robotY }];
+    const stopFlags = [false];
+    let prev = waypoints[0];
+    for (const stop of predictedOrder) {
+      const seg = roadPathBetween(prev, stop);
+      for (let i = 1; i < seg.length; i++) {
+        waypoints.push(seg[i]);
+        stopFlags.push(i === seg.length - 1);
+      }
+      prev = stop;
+    }
+    return { waypoints, stopFlags };
+  }
+
+  function startAutopilotRoute(tabId) {
+    if (predictedOrder.length === 0) return;
+    stopAutopilot();
+
+    resetRobotPosition(); // bus starts from the known starting spot
+
+    autopilotTabId = tabId;
+    const built = buildAutopilotRoute();
+    autopilotWaypoints = built.waypoints;
+    autopilotStopFlags = built.stopFlags;
+    autopilotIndex = 1;
+    autopilotActive = true;
+    autopilotLastTime = null;
+
+    const statusEl = document.getElementById('motorStatus-' + tabId);
+    const subEl = document.getElementById('motorSubstatus-' + tabId);
+    if (statusEl) { statusEl.textContent = '🚌 Autopilot: driving predicted route'; statusEl.classList.add('moving'); }
+    if (subEl) subEl.textContent = `Heading to stop 1 of ${predictedOrder.length}`;
+
+    advanceAutopilotLeg();
+  }
+
+  function stopAutopilot() {
+    autopilotActive = false;
+    if (autopilotFrame) { cancelAnimationFrame(autopilotFrame); autopilotFrame = null; }
+    autopilotLastTime = null;
+  }
+
+  function doAutopilotTurn(dir, onDone) {
+    attemptTurn(dir);
+    driveRealTurn(dir);
+    setDpadUi(autopilotTabId, dir);
+    const statusEl = document.getElementById('motorStatus-' + autopilotTabId);
+    if (statusEl) statusEl.textContent = `🚌 Autopilot: turning ${dir}`;
+    draw();
+    setTimeout(() => { if (autopilotActive) onDone(); }, TURN_SAFETY_TIMEOUT_MS);
+  }
+
+  function doAutopilotTurns(turns, onDone) {
+    if (!autopilotActive) return;
+    if (turns.length === 0) { onDone(); return; }
+    const [next, ...rest] = turns;
+    doAutopilotTurn(next, () => doAutopilotTurns(rest, onDone));
+  }
+
+  // Handles any turn needed to face the next waypoint, then starts driving to it.
+  function advanceAutopilotLeg() {
+    if (!autopilotActive) return;
+    if (autopilotIndex >= autopilotWaypoints.length) {
+      finishAutopilotRoute();
+      return;
+    }
+    const target = autopilotWaypoints[autopilotIndex];
+    const needed = facingNeededFor({ x: robotX, y: robotY }, target);
+    const turns = turnSequenceFor(robotFacing, needed);
+
+    const startDriving = () => {
+      if (!autopilotActive) return;
+      setDpadUi(autopilotTabId, 'forward');
+      driveRealMotor('forward');
+      const statusEl = document.getElementById('motorStatus-' + autopilotTabId);
+      if (statusEl) statusEl.textContent = '🚌 Autopilot: driving predicted route';
+      autopilotLastTime = null;
+      autopilotFrame = requestAnimationFrame(autopilotDriveStep);
+    };
+
+    if (turns.length > 0) doAutopilotTurns(turns, startDriving);
+    else startDriving();
+  }
+
+  function autopilotDriveStep(timestamp) {
+    if (!autopilotActive) return;
+    if (autopilotLastTime == null) autopilotLastTime = timestamp;
+    const dt = Math.min((timestamp - autopilotLastTime) / 1000, 0.1);
+    autopilotLastTime = timestamp;
+
+    const target = autopilotWaypoints[autopilotIndex];
+    const dist = ROBOT_LINEAR_SPEED * dt;
+    const horizontal = (robotFacing === 'left' || robotFacing === 'right');
+    const remaining = horizontal ? Math.abs(target.x - robotX) : Math.abs(target.y - robotY);
+
+    if (remaining <= dist) {
+      robotX = target.x;
+      robotY = target.y;
+      routeTrail.push({ x: robotX, y: robotY });
+      draw();
+
+      driveRealMotor('stop');
+
+      if (autopilotStopFlags[autopilotIndex]) {
+        const stopsReached = autopilotStopFlags.slice(0, autopilotIndex + 1).filter(Boolean).length;
+        const subEl = document.getElementById('motorSubstatus-' + autopilotTabId);
+        if (subEl) {
+          subEl.textContent = stopsReached < predictedOrder.length
+            ? `Reached stop ${stopsReached} of ${predictedOrder.length}`
+            : `Reached final stop (${predictedOrder.length} of ${predictedOrder.length})`;
+        }
+      }
+
+      autopilotIndex++;
+      advanceAutopilotLeg();
+      return;
+    }
+
+    if (robotFacing === 'left') robotX -= dist;
+    else if (robotFacing === 'right') robotX += dist;
+    else if (robotFacing === 'up') robotY -= dist;
+    else if (robotFacing === 'down') robotY += dist;
+
+    draw();
+    autopilotFrame = requestAnimationFrame(autopilotDriveStep);
+  }
+
+  function finishAutopilotRoute() {
+    stopAutopilot();
+    driveRealMotor('stop');
+    setDpadUi(autopilotTabId, 'stop');
+    const statusEl = document.getElementById('motorStatus-' + autopilotTabId);
+    const subEl = document.getElementById('motorSubstatus-' + autopilotTabId);
+    if (statusEl) { statusEl.textContent = '🚌 Autopilot complete'; statusEl.classList.remove('moving'); }
+    if (subEl) subEl.textContent = `Visited all ${predictedOrder.length} predicted stops`;
+    draw();
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, CW, CH);
+
+    drawRoadMap();
+
+    // route lines, drawn under the pins/badges so the stops stay legible
+    drawTrailPath(); // the bus's actual continuous driven path
+    drawRoutePath(predictedOrder, '#facc15', true); // the model's suggested route — a real drivable path
+
+    // draw labeled bus stops on top
+    for (const p of points) {
+      drawBusStop(p.x, p.y, CLASS_COLORS[p.label]);
+    }
+
+    // visit-order badges (blue) — the route the bus actually drove
+    visitedRoute.forEach((p, i) => {
+      drawOrderBadge(p.x - 10, p.y - 13, i + 1, '#38bdf8');
+    });
+
+    // predicted-order badges (gold) — the model's suggested route
+    predictedOrder.forEach((p, i) => {
+      drawOrderBadge(p.x + 10, p.y - 13, i + 1, '#facc15');
+    });
+
+    // draw the live motor position on top of everything
+    drawRobotMarker();
+  }
+
+  function drawOrderBadge(x, y, num, color) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, 8, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = '#0b0d13';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = '#0b0d13';
+    ctx.font = 'bold 9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(num), x, y + 0.5);
+    ctx.restore();
+  }
+
+  function drawRoadMap(alpha = 1) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    // road bed
+    ctx.strokeStyle = '#2c303c';
+    ctx.lineWidth = 14;
+    ctx.lineCap = 'butt';
+    [...ROADS_H].forEach(y => {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CW, y); ctx.stroke();
+    });
+    [...ROADS_V].forEach(x => {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CH); ctx.stroke();
+    });
+
+    // dashed center lines
+    ctx.strokeStyle = '#565c6e';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 6]);
+    ROADS_H.forEach(y => {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CW, y); ctx.stroke();
+    });
+    ROADS_V.forEach(x => {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CH); ctx.stroke();
+    });
+    ctx.setLineDash([]);
+
+    // faint "city block" grid for texture
+    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+    ctx.lineWidth = 1;
+    for (let gx = 0; gx < CW; gx += 20) {
+      ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, CH); ctx.stroke();
+    }
+    for (let gy = 0; gy < CH; gy += 20) {
+      ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(CW, gy); ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  // draws a bus-stop-style marker: a small pole with a circular sign on top
+  function drawBusStop(x, y, color) {
+    ctx.save();
+    // pole
+    ctx.strokeStyle = '#0b0d13';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(x, y + 2);
+    ctx.lineTo(x, y + 10);
+    ctx.stroke();
+
+    // sign (circle)
+    ctx.beginPath();
+    ctx.arc(x, y - 3, 7, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = '#0b0d13';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // little "bus" glyph mark (simple rectangle) inside the sign
+    ctx.fillStyle = '#0b0d13';
+    ctx.fillRect(x - 3, y - 6, 6, 4);
+    ctx.restore();
+  }
+
+  // Draws the live motor position/heading — filled green while the real
+  // motor is connected, blue while only the visual simulation is driving.
+  function drawRobotMarker() {
+    const connected = !!writeChar;
+
+    if (connected) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(robotX, robotY, 16, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(74, 222, 128, 0.5)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.translate(robotX, robotY);
+    ctx.rotate(FACING_ANGLE[robotFacing]);
+    ctx.beginPath();
+    ctx.moveTo(0, -12);
+    ctx.lineTo(8, 9);
+    ctx.lineTo(-8, 9);
+    ctx.closePath();
+    ctx.fillStyle = connected ? '#4ade80' : '#38bdf8';
+    ctx.fill();
+    ctx.strokeStyle = '#0b0d13';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Advances the marker along whichever road it's currently facing —
+  // movement is locked to the road axis, so it can never drift off-street.
+  // Turning is handled separately by attemptTurn(), since turns only
+  // happen (instantly) at intersections, not while driving.
+  function stepRobot(dt) {
+    if (currentDriveDir !== 'forward' && currentDriveDir !== 'backward') return;
+    const sign = currentDriveDir === 'forward' ? 1 : -1;
+    const dist = ROBOT_LINEAR_SPEED * dt * sign;
+    if (robotFacing === 'up') robotY -= dist;
+    else if (robotFacing === 'down') robotY += dist;
+    else if (robotFacing === 'left') robotX -= dist;
+    else if (robotFacing === 'right') robotX += dist;
+    robotX = Math.max(14, Math.min(CW - 14, robotX));
+    robotY = Math.max(14, Math.min(CH - 14, robotY));
+  }
+
+  const STOP_VISIT_TOLERANCE = 16; // px — how close the bus needs to pass to "reach" a store
+
+  // Records a store as visited the moment the bus drives close enough to
+  // it — this is what actually builds the demonstrated training route.
+  function checkRouteVisits() {
+    for (const p of points) {
+      const dx = p.x - robotX, dy = p.y - robotY;
+      if (Math.sqrt(dx * dx + dy * dy) <= STOP_VISIT_TOLERANCE) {
+        const last = visitedRoute[visitedRoute.length - 1];
+        if (last !== p) {
+          visitedRoute.push(p);
+          renderRouteLog();
+          disableRouteModelUi(); // new data means the old trained model is stale
+          updateStatus();
+        }
+      }
+    }
+  }
+
+  function driveAnimLoop(timestamp) {
+    if (lastFrameTime == null) lastFrameTime = timestamp;
+    const dt = Math.min((timestamp - lastFrameTime) / 1000, 0.1);
+    lastFrameTime = timestamp;
+    stepRobot(dt);
+    checkRouteVisits();
+
+    const atIntersection = isAtIntersection(robotX, robotY);
+
+    if (!departedIntersection) {
+      // Still within the intersection we started this drive from — wait
+      // until we've actually left it before watching for the next one.
+      if (!atIntersection) departedIntersection = true;
+    } else if (atIntersection) {
+      if (pendingTurn) {
+        const dir = pendingTurn;
+        const tabId = pendingTurnTabId;
+        pendingTurn = null;
+        performTurn(tabId, dir); // stops driving/animation and executes the pivot itself
+      } else {
+        stopAtIntersection(activeDriveTabId);
+      }
+      return;
+    }
+
+    draw();
+    if (currentDriveDir !== 'stop') {
+      driveAnimFrame = requestAnimationFrame(driveAnimLoop);
+    } else {
+      driveAnimFrame = null;
+      lastFrameTime = null;
+    }
+  }
+
+  function resetRobotPosition() {
+    if (autopilotActive) { stopAutopilot(); driveRealMotor('stop'); }
+    robotX = ROADS_V[1];
+    robotY = ROADS_H[1];
+    robotFacing = 'right';
+    departedIntersection = true;
+    pendingTurn = null;
+    routeTrail = [{ x: robotX, y: robotY }];
+    draw();
+  }
+
+  buildLabelInputs();
+  buildClassButtons();
+  buildCountsRow();
+  renderRouteLog();
+  draw();
+  updateStatus();
+
+  // ---- LEGO Education double motor control ----
+  // Runs as a visual simulation by default. "Connect Real Motor" uses the
+  // Web Bluetooth API with LEGO's proprietary BLE protocol for this specific
+  // device family (confirmed working, reverse-engineered from a real project
+  // that successfully drives the same Double Motor 45651).
+
+  const motorState = {
+    supervised: 'stop',
+    unsupervised: 'stop'
+  };
+
+  const MOTOR_LABELS = {
+    forward:  { status: 'Driving forward',  sub: 'Following the road, straight ahead' },
+    backward: { status: 'Driving backward', sub: 'Reversing along the road' },
+    left:     { status: 'Turning left',     sub: '90° pivot at the intersection' },
+    right:    { status: 'Turning right',    sub: '90° pivot at the intersection' },
+    stop:     { status: 'Stopped',          sub: 'Double motor idle' }
+  };
+
+  const MOTOR_ICON_CLASS = {
+    forward: 'spin-cw',
+    backward: 'spin-ccw',
+    left: 'spin-slow-ccw',
+    right: 'spin-slow-cw',
+    stop: ''
+  };
+
+  // LEGO Education BLE protocol (confirmed against a working implementation)
+  const LEGO = {
+    SERVICE: '0000fd02-0000-1000-8000-00805f9b34fb',
+    WRITE:   '0000fd02-0001-1000-8000-00805f9b34fb',
+    NOTIFY:  '0000fd02-0002-1000-8000-00805f9b34fb',
+    INFO_REQUEST: 0,
+    INFO_RESPONSE: 1,
+    DEVICE_NOTIFICATION_REQUEST: 40,
+    DEVICE_NOTIFICATION_RESPONSE: 41,
+    MOTOR_RUN_COMMAND: 122,              // continuous run in a direction, until stopped
+    MOTOR_RUN_FOR_DEGREES_COMMAND: 124,  // precise, calibrated rotation — used for turns
+    MOTOR_RUN_TO_RELATIVE_POSITION_COMMAND: 130,
+    MOTOR_STOP_COMMAND: 138,
+    MOTOR_SET_SPEED_COMMAND: 140,
+    PG_DOUBLE_MOTOR: 513
+  };
+
+  // Confirmed against a real, working implementation of this same hardware.
+  const DIRECTION_CLOCKWISE = 0;
+  const DIRECTION_COUNTERCLOCKWISE = 1;
+
+  function u8(...bytes) { return Uint8Array.from(bytes); }
+
+  function concatBytes(list) {
+    let n = 0;
+    for (const a of list) n += a.length;
+    const out = new Uint8Array(n);
+    let o = 0;
+    for (const a of list) { out.set(a, o); o += a.length; }
+    return out;
+  }
+
+  function motorSetSpeed(mask, speed) {
+    const s = Math.max(-100, Math.min(100, Math.round(speed)));
+    return u8(LEGO.MOTOR_SET_SPEED_COMMAND, mask, s & 0xff);
+  }
+
+  // Starts a continuous run in a given rotation direction — the proper,
+  // purpose-built command for "keep driving until stopped," replacing the
+  // earlier huge-distance Run-To-Relative-Position workaround.
+  function motorRun(mask, direction) {
+    return u8(LEGO.MOTOR_RUN_COMMAND, mask, direction);
+  }
+
+  // Rotates a motor a precise number of degrees, then stops on its own —
+  // the proper way to do a calibrated turn instead of a timeout guess.
+  function motorRunForDegrees(mask, degrees, direction) {
+    const b = new Uint8Array(7);
+    const dv = new DataView(b.buffer);
+    dv.setUint8(0, LEGO.MOTOR_RUN_FOR_DEGREES_COMMAND);
+    dv.setUint8(1, mask);
+    dv.setInt32(2, Math.round(degrees), true);
+    dv.setUint8(6, direction);
+    return b;
+  }
+
+  function motorRunToRel(mask, pos) {
+    const b = new Uint8Array(6);
+    const dv = new DataView(b.buffer);
+    dv.setUint8(0, LEGO.MOTOR_RUN_TO_RELATIVE_POSITION_COMMAND);
+    dv.setUint8(1, mask);
+    dv.setInt32(2, Math.round(pos), true);
+    return b;
+  }
+
+  function motorStopMsg(mask) {
+    return u8(LEGO.MOTOR_STOP_COMMAND, mask);
+  }
+
+  let bleDevice = null;
+  let pending = {}; // responseId -> resolver, mirrors the reference implementation's handshake pattern
+
+  function setBleStatus(text, connected) {
+    ['supervised', 'unsupervised'].forEach(tabId => {
+      const el = document.getElementById('bleStatusText-' + tabId);
+      const btn = document.getElementById('bleConnectBtn-' + tabId);
+      if (el) el.textContent = text;
+      if (btn) {
+        btn.classList.toggle('connected', !!connected);
+        btn.textContent = connected ? '🟢 Motor Connected' : '🔵 Connect Real Motor';
+      }
+    });
+  }
+
+  function awaitResponse(responseId, timeout) {
+    return new Promise(resolve => {
+      pending[responseId] = resolve;
+      setTimeout(() => {
+        if (pending[responseId]) { delete pending[responseId]; resolve(null); }
+      }, timeout);
+    });
+  }
+
+  function onNotify(dv) {
+    if (dv.byteLength < 1) return;
+    const id = dv.getUint8(0);
+    if (pending[id]) {
+      const resolve = pending[id];
+      delete pending[id];
+      resolve(new DataView(dv.buffer, dv.byteOffset + 1, dv.byteLength - 1));
+    }
+    // Live motor-position / sensor notifications (type 60) aren't needed for
+    // simple directional driving, so they're not parsed here.
+  }
+
+  // All writes are chained through this queue so two calls fired close
+  // together (e.g. motor 1's and motor 2's speed commands) never overlap —
+  // Web Bluetooth only allows one GATT operation in flight at a time, and
+  // sending a second write before the first finishes throws
+  // "GATT operation already in progress". A small pacing delay between
+  // writes is also included — confirmed necessary against real hardware in
+  // a working reference implementation of this same protocol.
+  let writeQueue = Promise.resolve();
+  const WRITE_PACING_MS = 40;
+
+  function sendBytes(bytes) {
+    writeQueue = writeQueue.then(async () => {
+      if (!writeChar) return;
+      try {
+        await writeChar.writeValueWithoutResponse(bytes);
+      } catch (e) {
+        try { await writeChar.writeValue(bytes); } catch (e2) { console.error('LEGO write failed:', e2); }
+      }
+      await new Promise(r => setTimeout(r, WRITE_PACING_MS));
+    }).catch(err => console.error('LEGO write queue error:', err));
+    return writeQueue;
+  }
+
+  let connectInProgress = false;
+
+  async function connectMotorBluetooth() {
+    if (!navigator.bluetooth) {
+      setBleStatus('Web Bluetooth isn\'t available in this browser — try Chrome or Edge.', false);
+      return;
+    }
+    if (connectInProgress) {
+      console.warn('Connect already in progress — ignoring extra click.');
+      return;
+    }
+    connectInProgress = true;
+    ['supervised', 'unsupervised'].forEach(tabId => {
+      const btn = document.getElementById('bleConnectBtn-' + tabId);
+      if (btn) btn.disabled = true;
+    });
+
+    try {
+      setBleStatus('Requesting device… choose your LEGO motor in the browser popup.', false);
+      bleDevice = await navigator.bluetooth.requestDevice({
+        filters: [{ services: [LEGO.SERVICE] }],
+        optionalServices: [LEGO.SERVICE]
+      });
+
+      bleDevice.addEventListener('gattserverdisconnected', () => {
+        writeChar = null;
+        setBleStatus('Disconnected — click Connect to pair again.', false);
+      });
+
+      setBleStatus(`Found ${bleDevice.name || 'device'} — connecting…`, false);
+      const server = await bleDevice.gatt.connect();
+      const service = await server.getPrimaryService(LEGO.SERVICE);
+      writeChar = await service.getCharacteristic(LEGO.WRITE);
+      const notifyChar = await service.getCharacteristic(LEGO.NOTIFY);
+
+      await notifyChar.startNotifications();
+      notifyChar.addEventListener('characteristicvaluechanged', e => onNotify(e.target.value));
+
+      // Handshake: ask the device what it is, confirm it's a Double Motor.
+      await sendBytes(u8(LEGO.INFO_REQUEST));
+      const info = await awaitResponse(LEGO.INFO_RESPONSE, 3000);
+
+      if (!info) {
+        setBleStatus('Connected, but the device didn\'t respond to the handshake. Try again.', false);
+        bleDevice.gatt.disconnect();
+        return;
+      }
+
+      const productGroup = info.getUint16(14, true);
+      if (productGroup !== LEGO.PG_DOUBLE_MOTOR) {
+        setBleStatus(`Connected, but this device identified as product group ${productGroup}, not a Double Motor. Did you pick the right device?`, false);
+        bleDevice.gatt.disconnect();
+        return;
+      }
+
+      setBleStatus(`Connected to ${bleDevice.name || 'LEGO Double Motor'} — driving real hardware.`, true);
+    } catch (err) {
+      console.error('LEGO BLE connect error:', err);
+      if (err.name === 'NotFoundError') {
+        setBleStatus('No device selected, or none found nearby. Make sure the motor is powered on and in pairing mode.', false);
+      } else {
+        setBleStatus('Connection failed or cancelled: ' + err.message, false);
+      }
+    } finally {
+      connectInProgress = false;
+      ['supervised', 'unsupervised'].forEach(tabId => {
+        const btn = document.getElementById('bleConnectBtn-' + tabId);
+        if (btn) btn.disabled = false;
+      });
+    }
+  }
+
+  const CONTINUOUS_DRIVE_DELTA = 100000; // large tick count so it drives "indefinitely" until Stop
+
+  // Motor 2 is physically mounted/wired facing the opposite direction from
+  // motor 1 (confirmed on real hardware: sending both the same "positive"
+  // speed drove one forward and the other backward), so its sign is flipped
+  // here before every command — every other direction stays defined in terms
+  // of "both wheels agreeing," so this is the one place the correction lives.
+  const MOTOR_2_INVERT = -1;
+
+  function sendMotorPowerPair(powerA, powerB, delta) {
+    const speeds = [powerA, powerB * MOTOR_2_INVERT];
+    for (const [mask, speed] of [[1, speeds[0]], [2, speeds[1]]]) {
+      const d = speed >= 0 ? delta : -delta;
+      sendBytes(concatBytes([motorSetSpeed(mask, speed), motorRunToRel(mask, d)]));
+    }
+  }
+
+  function stopRealMotor() {
+    sendBytes(motorStopMsg(1));
+    sendBytes(motorStopMsg(2));
+  }
+
+  function driveRealMotor(dir) {
+    if (!writeChar) return;
+    if (dir === 'stop') { stopRealMotor(); return; }
+    const POWER = { forward: [70, 70], backward: [-70, -70] }[dir];
+    if (!POWER) return;
+    // Speed alone only sets a register — Run-To-Relative-Position is what
+    // actually triggers movement, so both are sent together per motor,
+    // driving a large distance in the commanded direction.
+    sendMotorPowerPair(POWER[0], POWER[1], CONTINUOUS_DRIVE_DELTA);
+  }
+
+  // A 90° pivot at an intersection, now using the motor's native
+  // Run-For-Degrees command instead of a timeout guess — it rotates a
+  // precise number of degrees and stops on its own. TURN_DEGREES is how
+  // far each wheel turns, not the robot's own turn angle, so it's still a
+  // value to calibrate: raise it if the pivot under-shoots 90°, lower it
+  // if it over-shoots. A short safety timeout backs it up in case the
+  // motor doesn't report completion.
+  const TURN_DEGREES = 180;
+  const TURN_SAFETY_TIMEOUT_MS = 1500;
+
+  function driveRealTurn(turnDir) {
+    if (!writeChar) return;
+    // Same validated left/right convention as before (motor 1/motor 2
+    // intended powers, corrected for motor 2's physical inversion),
+    // translated into this command's magnitude + direction-enum format.
+    const POWER = turnDir === 'left' ? [50, -50] : [-50, 50];
+    const speeds = [POWER[0], POWER[1] * MOTOR_2_INVERT];
+    for (const [mask, signedSpeed] of [[1, speeds[0]], [2, speeds[1]]]) {
+      const magnitude = Math.abs(signedSpeed);
+      const direction = signedSpeed >= 0 ? DIRECTION_CLOCKWISE : DIRECTION_COUNTERCLOCKWISE;
+      sendBytes(concatBytes([motorSetSpeed(mask, magnitude), motorRunForDegrees(mask, TURN_DEGREES, direction)]));
+    }
+    setTimeout(stopRealMotor, TURN_SAFETY_TIMEOUT_MS);
+  }
+
+  // Updates the D-pad highlight + spinning icon for one tab to reflect
+  // whichever direction is actually happening right now.
+  function setDpadUi(tabId, activeDir) {
+    const dpad = document.querySelector(`#panel-${tabId} .dpad`);
+    const icon = document.getElementById('motorIcon-' + tabId);
+    if (dpad) {
+      dpad.querySelectorAll('button').forEach(b => {
+        b.classList.toggle('active', b.dataset.dir === activeDir);
+      });
+    }
+    if (icon) {
+      icon.classList.remove('spin-cw', 'spin-ccw', 'spin-slow-cw', 'spin-slow-ccw');
+      const spinClass = MOTOR_ICON_CLASS[activeDir];
+      if (spinClass) icon.classList.add(spinClass);
+    }
+  }
+
+  // Executes a 90° turn right now — called either immediately (already at
+  // an intersection) or from the drive loop once a queued turn's
+  // intersection is reached. Always stops any continuous driving first.
+  function performTurn(tabId, dir) {
+    currentDriveDir = 'stop';
+    if (driveAnimFrame) { cancelAnimationFrame(driveAnimFrame); driveAnimFrame = null; lastFrameTime = null; }
+    driveRealMotor('stop');
+    routeTrail.push({ x: robotX, y: robotY }); // corner waypoint
+
+    const statusEl = document.getElementById('motorStatus-' + tabId);
+    const subEl = document.getElementById('motorSubstatus-' + tabId);
+
+    const turned = attemptTurn(dir);
+    if (turned) {
+      driveRealTurn(dir);
+      setDpadUi(tabId, dir);
+      if (statusEl) { statusEl.textContent = MOTOR_LABELS[dir].status; statusEl.classList.add('moving'); }
+      if (subEl) subEl.textContent = MOTOR_LABELS[dir].sub;
+      setTimeout(() => {
+        setDpadUi(tabId, 'stop');
+        if (statusEl) { statusEl.textContent = MOTOR_LABELS.stop.status; statusEl.classList.remove('moving'); }
+        if (subEl) subEl.textContent = MOTOR_LABELS.stop.sub;
+      }, TURN_SAFETY_TIMEOUT_MS);
+    } else {
+      // Shouldn't normally happen (caller already checked), but guard anyway.
+      setDpadUi(tabId, 'stop');
+      if (statusEl) { statusEl.textContent = 'Can\'t turn here'; statusEl.classList.remove('moving'); }
+      if (subEl) subEl.textContent = 'Only allowed at an intersection.';
+    }
+    draw();
+  }
+
+  // Called automatically when driving reaches an intersection with no turn
+  // queued — the motor always stops here rather than rolling through.
+  function stopAtIntersection(tabId) {
+    currentDriveDir = 'stop';
+    if (driveAnimFrame) { cancelAnimationFrame(driveAnimFrame); driveAnimFrame = null; lastFrameTime = null; }
+    driveRealMotor('stop');
+
+    // Snap exactly onto the intersection to correct any small drift.
+    robotX = nearestValue(robotX, ROADS_V);
+    robotY = nearestValue(robotY, ROADS_H);
+    routeTrail.push({ x: robotX, y: robotY }); // corner waypoint
+
+    setDpadUi(tabId, 'stop');
+    const statusEl = document.getElementById('motorStatus-' + tabId);
+    const subEl = document.getElementById('motorSubstatus-' + tabId);
+    if (statusEl) { statusEl.textContent = 'Stopped at intersection'; statusEl.classList.remove('moving'); }
+    if (subEl) subEl.textContent = 'Press a direction to continue';
+    draw();
+  }
+
+  function setMotorDir(tabId, dir) {
+    if (autopilotActive) {
+      stopAutopilot();
+      driveRealMotor('stop');
+    }
+    motorState[tabId] = dir;
+
+    const statusEl = document.getElementById('motorStatus-' + tabId);
+    const subEl = document.getElementById('motorSubstatus-' + tabId);
+
+    if (dir === 'left' || dir === 'right') {
+      if (isAtIntersection(robotX, robotY)) {
+        // Already at an intersection — turn right now.
+        pendingTurn = null;
+        performTurn(tabId, dir);
+      } else {
+        // Not there yet — queue the turn. If already driving, keep driving;
+        // the loop fires the turn automatically once it reaches an intersection.
+        pendingTurn = dir;
+        pendingTurnTabId = tabId;
+        setDpadUi(tabId, currentDriveDir);
+        const baseLabel = currentDriveDir === 'stop' ? 'Stopped' : MOTOR_LABELS[currentDriveDir].status;
+        if (statusEl) {
+          statusEl.textContent = `${baseLabel} — will turn ${dir} at next intersection`;
+          statusEl.classList.toggle('moving', currentDriveDir !== 'stop');
+        }
+        if (subEl) {
+          subEl.textContent = currentDriveDir !== 'stop'
+            ? 'Continuing until then'
+            : 'Press Forward or Backward to reach one';
+        }
+        draw();
+      }
+      return;
+    }
+
+    // forward / backward / stop — continuous driving along the current road
+    if (dir === 'stop') pendingTurn = null; // an explicit stop cancels any queued turn
+    if (dir === 'forward' || dir === 'backward') {
+      activeDriveTabId = tabId;
+      departedIntersection = false; // don't re-trigger a stop at the intersection we're starting from
+    }
+
+    setDpadUi(tabId, dir);
+    const info = MOTOR_LABELS[dir];
+    if (statusEl) {
+      statusEl.textContent = info.status;
+      statusEl.classList.toggle('moving', dir !== 'stop');
+    }
+    if (subEl) subEl.textContent = info.sub;
+
+    driveRealMotor(dir);
+
+    currentDriveDir = dir;
+    if (dir !== 'stop') {
+      if (!driveAnimFrame) {
+        lastFrameTime = null;
+        driveAnimFrame = requestAnimationFrame(driveAnimLoop);
+      }
+    } else {
+      draw(); // immediate redraw so the marker's color/state updates right away
+    }
+  }
+</script>
+
+</body>
+</html>
