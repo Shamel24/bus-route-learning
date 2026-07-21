@@ -1878,22 +1878,11 @@
       await notifyChar.startNotifications();
       notifyChar.addEventListener('characteristicvaluechanged', e => onNotify(e.target.value));
 
-      // Handshake: ask the device what it is, confirm it's a Double Motor.
-      await sendBytes(u8(LEGO.INFO_REQUEST));
-      const info = await awaitResponse(LEGO.INFO_RESPONSE, 3000);
-
-      if (!info) {
-        setBleStatus('Connected, but the device didn\'t respond to the handshake. Try again.', false);
-        bleDevice.gatt.disconnect();
-        return;
-      }
-
-      const productGroup = info.getUint16(14, true);
-      if (productGroup !== LEGO.PG_DOUBLE_MOTOR) {
-        setBleStatus(`Connected, but this device identified as product group ${productGroup}, not a Double Motor. Did you pick the right device?`, false);
-        bleDevice.gatt.disconnect();
-        return;
-      }
+      // No handshake — confirmed from LEGO's own official Python package
+      // (legoeducation on PyPI) that a real, working client just subscribes
+      // to notifications and immediately requests telemetry, without
+      // waiting for an identification response first.
+      await sendBytes(u8(LEGO.DEVICE_NOTIFICATION_REQUEST, 100, 0));
 
       setBleStatus(`Connected to ${bleDevice.name || 'LEGO Double Motor'} — driving real hardware.`, true);
     } catch (err) {
