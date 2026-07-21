@@ -1074,6 +1074,7 @@
     if (removed) {
       visitedRoute = visitedRoute.filter(p => p !== removed);
       predictedOrder = predictedOrder.filter(p => p !== removed);
+      currentlyNearStops.delete(removed);
     }
     renderRouteLog();
     disableRouteModelUi();
@@ -1087,6 +1088,7 @@
     visitedRoute = [];
     predictedOrder = [];
     routeTrail = [{ x: robotX, y: robotY }];
+    currentlyNearStops = new Set();
     renderRouteLog();
     disableRouteModelUi();
     updateStatus();
@@ -1098,6 +1100,7 @@
     visitedRoute = [];
     predictedOrder = [];
     routeTrail = [{ x: robotX, y: robotY }];
+    currentlyNearStops = new Set();
     renderRouteLog();
     disableRouteModelUi();
     updateStatus();
@@ -1615,15 +1618,35 @@
   }
 
   const STOP_VISIT_TOLERANCE = 16; // px — how close the bus needs to pass to "reach" a store
+  const SAME_ROAD_TOLERANCE = 3; // px — how exactly the bus's fixed coordinate must match the stop's road
 
-  // Records a store as visited the moment the bus drives close enough to
-  // it — this is what actually builds the demonstrated training route.
+  // Tracks which stops are currently within range, so a visit is only
+  // recorded the moment the bus ENTERS a store's range — not on every
+  // frame it happens to still be nearby. Without this, two stores placed
+  // close together could ping-pong: each frame, whichever one wasn't the
+  // very last entry would pass a simple "not equal to last" check and get
+  // re-added, flooding the log with alternating duplicates.
+  let currentlyNearStops = new Set();
+
+  // Records a store as visited the moment the bus drives past it while
+  // actually traveling on that store's own road — this is what builds the
+  // demonstrated training route. Checking road membership (not just
+  // straight-line distance) avoids falsely crediting a stop that merely
+  // sits close by on a different, perpendicular road.
   function checkRouteVisits() {
+    const stillNear = new Set();
     for (const p of points) {
+      const info = roadInfoFor(p);
+      if (!info) continue;
+      const onSameRoad = info.axis === 'h'
+        ? Math.abs(robotY - info.coord) <= SAME_ROAD_TOLERANCE
+        : Math.abs(robotX - info.coord) <= SAME_ROAD_TOLERANCE;
+      if (!onSameRoad) continue;
+
       const dx = p.x - robotX, dy = p.y - robotY;
       if (Math.sqrt(dx * dx + dy * dy) <= STOP_VISIT_TOLERANCE) {
-        const last = visitedRoute[visitedRoute.length - 1];
-        if (last !== p) {
+        stillNear.add(p);
+        if (!currentlyNearStops.has(p)) {
           visitedRoute.push(p);
           renderRouteLog();
           disableRouteModelUi(); // new data means the old trained model is stale
@@ -1631,6 +1654,7 @@
         }
       }
     }
+    currentlyNearStops = stillNear;
   }
 
   function driveAnimLoop(timestamp) {
@@ -1675,6 +1699,7 @@
     departedIntersection = true;
     pendingTurn = null;
     routeTrail = [{ x: robotX, y: robotY }];
+    currentlyNearStops = new Set();
     draw();
   }
 
@@ -1937,7 +1962,7 @@
   // value to calibrate: raise it if the pivot under-shoots 90°, lower it
   // if it over-shoots. A short safety timeout backs it up in case the
   // motor doesn't report completion.
-  const TURN_DEGREES = 180;
+  const TURN_DEGREES = 150;
   const TURN_SAFETY_TIMEOUT_MS = 1500;
 
   function driveRealTurn(turnDir) {
