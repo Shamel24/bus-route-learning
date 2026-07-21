@@ -626,7 +626,11 @@
 
     <div class="trainer">
       <h3>Try it: let the model find its own route</h3>
-      <p class="hint">Click along the streets to drop store pins — there's no type to pick and nothing to label, since there's no supervision here. Then predict a route: K-Means clustering groups the stores by location alone (no labels, no demonstrated route needed), and the bus autopilots a path that visits each cluster in turn.</p>
+      <p class="hint">Rename the store types if you like, pick one, and click along the streets to drop labeled store pins — just like the Supervised tab. The difference is what happens next: instead of driving a demonstration route to train a model on, K-Means clustering groups the stores by type <em>and</em> location alone, with no route ever demonstrated, and the bus autopilots a path that visits each cluster in turn.</p>
+
+      <div class="label-names" id="uLabelNames"></div>
+
+      <div class="class-select" id="uClassSelect"></div>
 
       <div class="map-motor-row">
         <div class="map-column">
@@ -635,30 +639,20 @@
           </div>
 
           <div class="status-row">
-            <div class="counts-row">
-              <span class="count-chip"><span class="dot" style="background:#ff8c6c;"></span><span>Stores: </span><span id="uStoreCount">0</span></span>
-            </div>
+            <div class="counts-row" id="uCountsRow"></div>
             <button id="resetBusPositionBtnUnsup" onclick="resetRobotPosition()" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;">📍 Reset Bus Position</button>
           </div>
         </div>
 
         <div class="motor-column">
-          <h3>LEGO Motor Control</h3>
-          <p class="hint">Drive the LEGO Education double motor — forward, backward, and turns. Runs as a visual simulation by default; click "Connect Real Motor" to pair over Bluetooth (Chrome/Edge, needs https:// or localhost).</p>
+          <h3>LEGO Motor Status</h3>
+          <p class="hint">There's no manual driving here — this bus only moves in autopilot mode, following the model's predicted route below. Connect a real motor to have it drive in sync (Chrome/Edge, needs https:// or localhost).</p>
           <div class="motor-widget">
-            <div class="dpad">
-              <button class="fwd" data-dir="forward" onclick="setMotorDir('unsupervised','forward')" title="Forward — drives in the direction the bus is currently facing">▲</button>
-              <button class="left" data-dir="left" onclick="setMotorDir('unsupervised','left')" title="Left — turns the bus left relative to its current facing">◀</button>
-              <button class="stop" data-dir="stop" onclick="setMotorDir('unsupervised','stop')" title="Stop">■</button>
-              <button class="right" data-dir="right" onclick="setMotorDir('unsupervised','right')" title="Right — turns the bus right relative to its current facing">▶</button>
-              <button class="back" data-dir="backward" onclick="setMotorDir('unsupervised','backward')" title="Backward — drives opposite the direction the bus is currently facing">▼</button>
-            </div>
             <div class="motor-readout">
               <div class="motor-status" id="motorStatus-unsupervised">Stopped</div>
               <div class="motor-substatus" id="motorSubstatus-unsupervised">Double motor idle</div>
             </div>
           </div>
-          <p class="hint dpad-legend">▲ Forward / ▼ Backward drive along whichever way the bus is currently facing (opposite for backward) — they're not fixed compass directions. ◀ Left / ▶ Right turn 90° relative to that facing.</p>
           <div class="ble-row">
             <button class="ble-connect-btn" id="bleConnectBtn-unsupervised" onclick="connectMotorBluetooth()">🔵 Connect Real Motor</button>
             <span class="ble-status-text" id="bleStatusText-unsupervised">Not connected — driving the visual simulation only</span>
@@ -742,9 +736,10 @@
   // predicted route are kept separate per tab.
   const canvasU = document.getElementById('mapCanvasUnsup');
   const ctxU = canvasU.getContext('2d');
-  let uPoints = []; // {x, y} — unlabeled store pins
+  let uNames = ['Bakery', 'Bookstore', 'Hardware Store'];
+  let uPoints = []; // {x, y, label} — label = store type index, same idea as the supervised tab
+  let uCurrentClass = 0;
   let uPredictedOrder = []; // ordered array of uPoints, from the clustering model's last prediction
-  const STORE_COLOR_UNSUP = '#ff8c6c';
 
   function nearestValue(v, arr) {
     return arr.reduce((best, cur) => Math.abs(cur - v) < Math.abs(best - v) ? cur : best);
@@ -1035,17 +1030,24 @@
   }
 
   const ROAD_SNAP_TOLERANCE = 20; // px — how close a click needs to be to a road to place a store
+  const ROBOT_EDGE_MARGIN = 14; // px — keeps the bus marker fully on-canvas at every intersection and stop
 
-  // Finds the closest point directly on the road network to (x, y).
+  // Finds the closest point directly on the road network to (x, y). The
+  // "free" coordinate (whichever axis isn't snapped to a road) is clamped to
+  // stay within ROBOT_EDGE_MARGIN of the edge — otherwise a store placed
+  // near the canvas border would later pull the bus marker there too during
+  // autopilot, clipping part of it off-canvas.
   function nearestRoadPoint(x, y) {
+    const freeX = Math.max(ROBOT_EDGE_MARGIN, Math.min(CW - ROBOT_EDGE_MARGIN, x));
+    const freeY = Math.max(ROBOT_EDGE_MARGIN, Math.min(CH - ROBOT_EDGE_MARGIN, y));
     let best = null;
     for (const h of ROADS_H) {
       const dist = Math.abs(h - y);
-      if (!best || dist < best.dist) best = { x, y: h, dist };
+      if (!best || dist < best.dist) best = { x: freeX, y: h, dist };
     }
     for (const v of ROADS_V) {
       const dist = Math.abs(v - x);
-      if (!best || dist < best.dist) best = { x: v, y, dist };
+      if (!best || dist < best.dist) best = { x: v, y: freeY, dist };
     }
     return best;
   }
@@ -1704,8 +1706,8 @@
     else if (robotFacing === 'down') robotY += dist;
     else if (robotFacing === 'left') robotX -= dist;
     else if (robotFacing === 'right') robotX += dist;
-    robotX = Math.max(14, Math.min(CW - 14, robotX));
-    robotY = Math.max(14, Math.min(CH - 14, robotY));
+    robotX = Math.max(ROBOT_EDGE_MARGIN, Math.min(CW - ROBOT_EDGE_MARGIN, robotX));
+    robotY = Math.max(ROBOT_EDGE_MARGIN, Math.min(CH - ROBOT_EDGE_MARGIN, robotY));
   }
 
   const STOP_VISIT_TOLERANCE = 16; // px — how close the bus needs to pass to "reach" a store
@@ -1811,14 +1813,170 @@
   updateStatus();
 
   // ---- Unsupervised learning demo: same shared bus + road network as the
-  // Supervised tab, but pins are plain, unlabeled "stores" — there's no
-  // class to pick and nothing to demonstrate by driving. Instead, a K-Means
-  // clustering model groups the stores by location alone, and the route is
-  // built by visiting each cluster in turn (nearest first).
+  // Supervised tab, and stores are labeled by type exactly the same way —
+  // the "unsupervised" part isn't the stores, it's the route: instead of
+  // training on a demonstrated drive, K-Means clustering groups the stores
+  // by type AND location alone, with no route ever demonstrated, and the
+  // route is built by visiting each cluster in turn (nearest first).
+
+  function uClassNames() {
+    return uNames.map((n, i) => {
+      const el = document.getElementById('uNameInput' + i);
+      return (el && el.value.trim()) || n;
+    });
+  }
+
+  function uSyncNamesFromInputs() {
+    uNames = uClassNames();
+  }
+
+  function uBuildLabelInputs() {
+    const wrap = document.getElementById('uLabelNames');
+    wrap.innerHTML = '';
+    uNames.forEach((name, i) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:4px;min-width:100px;flex:1;';
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.id = 'uNameInput' + i;
+      input.value = name;
+      input.maxLength = 20;
+      input.style.borderLeftColor = CLASS_COLORS[i];
+      input.style.flex = '1';
+      input.addEventListener('input', uRenderLabels);
+      row.appendChild(input);
+
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.textContent = '×';
+      delBtn.title = 'Delete this store type';
+      delBtn.onclick = () => uDeleteStoreType(i);
+      delBtn.style.cssText = 'flex-shrink:0;width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:1rem;line-height:1;cursor:pointer;';
+      if (uNames.length <= MIN_CLASSES) {
+        delBtn.disabled = true;
+        delBtn.style.opacity = '0.3';
+        delBtn.style.cursor = 'not-allowed';
+        delBtn.title = `At least ${MIN_CLASSES} store types are required`;
+      }
+      row.appendChild(delBtn);
+
+      wrap.appendChild(row);
+    });
+
+    const addBtn = document.createElement('button');
+    addBtn.id = 'uAddTypeBtn';
+    addBtn.type = 'button';
+    addBtn.textContent = '+ Add Store Type';
+    addBtn.onclick = uAddStoreType;
+    addBtn.style.cssText = 'padding:8px 14px;border-radius:8px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-weight:600;font-size:0.85rem;cursor:pointer;white-space:nowrap;';
+    if (uNames.length >= MAX_CLASSES) addBtn.disabled = true, addBtn.style.opacity = '0.4', addBtn.style.cursor = 'not-allowed';
+    wrap.appendChild(addBtn);
+  }
+
+  function uAddStoreType() {
+    if (uNames.length >= MAX_CLASSES) return;
+    uSyncNamesFromInputs();
+    uNames.push('Store Type ' + (uNames.length + 1));
+    uRebuildClassUI();
+    updateUStatus();
+    drawUnsup();
+  }
+
+  function uDeleteStoreType(i) {
+    if (uNames.length <= MIN_CLASSES) return;
+    uSyncNamesFromInputs();
+    uNames.splice(i, 1);
+
+    uPoints = uPoints
+      .filter(p => p.label !== i)
+      .map(p => p.label > i ? { ...p, label: p.label - 1 } : p);
+
+    // reindexing creates new point objects, so any predicted route
+    // referencing the old ones is now stale — clear it out.
+    uPredictedOrder = [];
+    const resultEl = document.getElementById('uPredictResult');
+    if (resultEl) resultEl.innerHTML = '';
+    uRebuildClassUI();
+    updateUStatus();
+    drawUnsup();
+  }
+
+  function uRebuildClassUI() {
+    uBuildLabelInputs();
+    uBuildClassButtons();
+    uBuildCountsRow();
+    uSetClass(Math.min(uCurrentClass, uNames.length - 1));
+  }
+
+  function uBuildClassButtons() {
+    const wrap = document.getElementById('uClassSelect');
+    wrap.innerHTML = '';
+    uNames.forEach((name, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'class-btn' + (i === uCurrentClass ? ' selected' : '');
+      btn.id = 'uClassBtn' + i;
+      btn.dataset.class = i;
+      btn.onclick = () => uSetClass(i);
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      dot.style.background = CLASS_COLORS[i];
+      const label = document.createElement('span');
+      label.id = 'uClassBtnLabel' + i;
+      label.textContent = name;
+      btn.appendChild(dot);
+      btn.appendChild(label);
+      wrap.appendChild(btn);
+    });
+  }
+
+  function uBuildCountsRow() {
+    const wrap = document.getElementById('uCountsRow');
+    wrap.innerHTML = '';
+    uNames.forEach((name, i) => {
+      const chip = document.createElement('span');
+      chip.className = 'count-chip';
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      dot.style.background = CLASS_COLORS[i];
+      const label = document.createElement('span');
+      label.id = 'uCountLabel' + i;
+      label.textContent = name + ': ';
+      const count = document.createElement('span');
+      count.id = 'uCount' + i;
+      count.textContent = uPoints.filter(p => p.label === i).length;
+      chip.appendChild(dot);
+      chip.appendChild(label);
+      chip.appendChild(count);
+      wrap.appendChild(chip);
+    });
+  }
+
+  function uRenderLabels() {
+    const currentNames = uClassNames();
+    currentNames.forEach((name, i) => {
+      const btnLabel = document.getElementById('uClassBtnLabel' + i);
+      const countLabel = document.getElementById('uCountLabel' + i);
+      if (btnLabel) btnLabel.textContent = name;
+      if (countLabel) countLabel.textContent = name + ': ';
+    });
+  }
+
+  function uSetClass(c) {
+    uCurrentClass = c;
+    uNames.forEach((_, i) => {
+      const btn = document.getElementById('uClassBtn' + i);
+      if (btn) btn.classList.toggle('selected', i === c);
+    });
+  }
 
   function updateUStatus() {
-    const countEl = document.getElementById('uStoreCount');
-    if (countEl) countEl.textContent = uPoints.length;
+    const numClasses = uNames.length;
+    for (let c = 0; c < numClasses; c++) {
+      const n = uPoints.filter(p => p.label === c).length;
+      const el = document.getElementById('uCount' + c);
+      if (el) el.textContent = n;
+    }
     const predictBtn = document.getElementById('uPredictRouteBtn');
     if (predictBtn) predictBtn.disabled = uPoints.length === 0;
   }
@@ -1840,7 +1998,7 @@
       }
       return;
     }
-    uPoints.push({ x: snap.x, y: snap.y });
+    uPoints.push({ x: snap.x, y: snap.y, label: uCurrentClass });
     // A new pin means the last predicted route no longer covers every store.
     uPredictedOrder = [];
     const resultEl = document.getElementById('uPredictResult');
@@ -1867,33 +2025,48 @@
     resetRobotPosition(); // shared bus — send it back to its starting spot
   }
 
-  // ---- The AI model: K-Means clustering — no labels, no demonstrated route,
-  // just the store locations themselves. Runs entirely in normalized (x, y)
-  // space (reusing normalize(), defined above for the supervised model).
+  // ---- The AI model: K-Means clustering. Stores are labeled by type just
+  // like the supervised tab, and the clustering uses both type (one-hot) and
+  // normalized location as its features — but unlike the supervised model,
+  // nothing here is trained on a demonstrated route: the clusters are found
+  // by the data's own structure alone, and the route just visits them.
+  function uBuildClusterFeatures(p) {
+    const numClasses = uNames.length;
+    const oneHot = Array(numClasses).fill(0);
+    oneHot[p.label] = 1;
+    const [nx, ny] = normalize(p.x, p.y);
+    return [...oneHot, nx, ny];
+  }
+
   function kMeansCluster(pts, k) {
-    const norm = pts.map(p => normalize(p.x, p.y));
+    const feats = pts.map(p => uBuildClusterFeatures(p));
+    const dim = feats[0].length;
     let centroids = [];
-    for (let i = 0; i < k; i++) centroids.push(norm[Math.floor(i * norm.length / k)]);
-    let assignments = new Array(norm.length).fill(-1);
+    for (let i = 0; i < k; i++) centroids.push(feats[Math.floor(i * feats.length / k)]);
+    let assignments = new Array(feats.length).fill(-1);
 
     for (let iter = 0; iter < 20; iter++) {
       let changed = false;
-      for (let i = 0; i < norm.length; i++) {
+      for (let i = 0; i < feats.length; i++) {
         let best = 0, bestDist = Infinity;
         for (let c = 0; c < k; c++) {
-          const dx = norm[i][0] - centroids[c][0], dy = norm[i][1] - centroids[c][1];
-          const d = dx * dx + dy * dy;
+          let d = 0;
+          for (let f = 0; f < dim; f++) {
+            const diff = feats[i][f] - centroids[c][f];
+            d += diff * diff;
+          }
           if (d < bestDist) { bestDist = d; best = c; }
         }
         if (assignments[i] !== best) { assignments[i] = best; changed = true; }
       }
-      const sums = Array.from({ length: k }, () => [0, 0, 0]);
-      for (let i = 0; i < norm.length; i++) {
-        const c = assignments[i];
-        sums[c][0] += norm[i][0]; sums[c][1] += norm[i][1]; sums[c][2]++;
+      const sums = Array.from({ length: k }, () => ({ vec: new Array(dim).fill(0), n: 0 }));
+      for (let i = 0; i < feats.length; i++) {
+        const s = sums[assignments[i]];
+        for (let f = 0; f < dim; f++) s.vec[f] += feats[i][f];
+        s.n++;
       }
       for (let c = 0; c < k; c++) {
-        if (sums[c][2] > 0) centroids[c] = [sums[c][0] / sums[c][2], sums[c][1] / sums[c][2]];
+        if (sums[c].n > 0) centroids[c] = sums[c].vec.map(v => v / sums[c].n);
       }
       if (!changed) break;
     }
@@ -1906,7 +2079,7 @@
   // Clusters every current store pin, then walks cluster-by-cluster (nearest
   // cluster centroid to wherever the route currently is, first), visiting
   // each cluster's own stops nearest-neighbor style — a route built entirely
-  // from the pins' locations, with no labels and no demonstration drive.
+  // from the pins' type + location, with no demonstration drive.
   function uPredictRoute() {
     if (uPoints.length === 0) return;
     const k = Math.max(1, Math.min(4, Math.round(Math.sqrt(uPoints.length))));
@@ -1939,10 +2112,11 @@
 
     uPredictedOrder = orderedStops;
 
+    const currentNames = uClassNames();
     const resultEl = document.getElementById('uPredictResult');
     if (resultEl) {
-      resultEl.innerHTML = `Found ${clusters.length} cluster${clusters.length === 1 ? '' : 's'} of stores — predicted route: ` +
-        orderedStops.map((p, i) => `<span class="predicted-label" style="color:#facc15">${i + 1}</span>`).join(' <span style="color:var(--muted)">→</span> ');
+      resultEl.innerHTML = `Found ${clusters.length} cluster${clusters.length === 1 ? '' : 's'} — predicted route: ` +
+        orderedStops.map((p, i) => `<span class="predicted-label" style="color:${CLASS_COLORS[p.label]}">${i + 1}. ${currentNames[p.label] || 'Store'}</span>`).join(' <span style="color:var(--muted)">→</span> ');
     }
 
     drawUnsup();
@@ -2143,7 +2317,7 @@
     uDrawTrailPath();
     uDrawAutopilotTrail();
 
-    for (const p of uPoints) uDrawBusStop(p.x, p.y, STORE_COLOR_UNSUP);
+    for (const p of uPoints) uDrawBusStop(p.x, p.y, CLASS_COLORS[p.label]);
 
     if (autopilotTabId === 'unsupervised') {
       uPredictedOrder.slice(0, autopilotStopsReached).forEach((p, i) => {
@@ -2154,6 +2328,9 @@
     uDrawRobotMarker();
   }
 
+  uBuildLabelInputs();
+  uBuildClassButtons();
+  uBuildCountsRow();
   updateUStatus();
   drawUnsup();
 
