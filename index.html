@@ -271,6 +271,7 @@
   #trainBtn { background: var(--accent); color: white; }
   #trainBtn:disabled { background: #3a3f4f; color: var(--muted); cursor: not-allowed; }
   #clearBtn, #undoBtn { background: transparent; color: var(--muted); border: 1px solid var(--border) !important; }
+  #resetBusPositionBtn:disabled { opacity: 0.4; cursor: not-allowed; }
 
   .status-row {
     display: flex;
@@ -374,6 +375,12 @@
     color: var(--muted);
     font-size: 0.88rem;
     margin: 0 0 16px 0;
+    line-height: 1.5;
+  }
+
+  .dpad-legend {
+    margin: 12px 0 0 0 !important;
+    font-size: 0.78rem !important;
     line-height: 1.5;
   }
 
@@ -576,7 +583,7 @@
 
           <div class="status-row">
             <div class="counts-row" id="countsRow"></div>
-            <button onclick="resetRobotPosition()" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;">📍 Reset Bus Position</button>
+            <button id="resetBusPositionBtn" onclick="resetRobotPosition()" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;">📍 Reset Bus Position</button>
           </div>
         </div>
 
@@ -585,11 +592,11 @@
           <p class="hint">Drive the bus with the D-pad — forward, backward, and turns. Runs as a visual simulation by default; click "Connect Real Motor" to pair over Bluetooth (Chrome/Edge, needs https:// or localhost).</p>
           <div class="motor-widget">
             <div class="dpad">
-              <button class="fwd" data-dir="forward" onclick="setMotorDir('supervised','forward')" title="Forward">▲</button>
-              <button class="left" data-dir="left" onclick="setMotorDir('supervised','left')" title="Left turn">◀</button>
+              <button class="fwd" data-dir="forward" onclick="setMotorDir('supervised','forward')" title="Forward — drives in the direction the bus is currently facing">▲</button>
+              <button class="left" data-dir="left" onclick="setMotorDir('supervised','left')" title="Left — turns the bus left relative to its current facing">◀</button>
               <button class="stop" data-dir="stop" onclick="setMotorDir('supervised','stop')" title="Stop">■</button>
-              <button class="right" data-dir="right" onclick="setMotorDir('supervised','right')" title="Right turn">▶</button>
-              <button class="back" data-dir="backward" onclick="setMotorDir('supervised','backward')" title="Backward">▼</button>
+              <button class="right" data-dir="right" onclick="setMotorDir('supervised','right')" title="Right — turns the bus right relative to its current facing">▶</button>
+              <button class="back" data-dir="backward" onclick="setMotorDir('supervised','backward')" title="Backward — drives opposite the direction the bus is currently facing">▼</button>
             </div>
             <div class="motor-readout">
               <div class="motor-icon-wrap">
@@ -607,6 +614,7 @@
               <div class="motor-substatus" id="motorSubstatus-supervised">Double motor idle</div>
             </div>
           </div>
+          <p class="hint dpad-legend">▲ Forward / ▼ Backward drive along whichever way the bus is currently facing (opposite for backward) — they're not fixed compass directions. ◀ Left / ▶ Right turn 90° relative to that facing.</p>
           <div class="ble-row">
             <button class="ble-connect-btn" id="bleConnectBtn-supervised" onclick="connectMotorBluetooth()">🔵 Connect Real Motor</button>
             <span class="ble-status-text" id="bleStatusText-supervised">Not connected — driving the visual simulation only</span>
@@ -651,11 +659,11 @@
       <p class="hint">Drive the LEGO Education double motor — forward, backward, and turns. Runs as a visual simulation by default; click "Connect Real Motor" to pair over Bluetooth (Chrome/Edge, needs https:// or localhost).</p>
       <div class="motor-widget">
         <div class="dpad">
-          <button class="fwd" data-dir="forward" onclick="setMotorDir('unsupervised','forward')" title="Forward">▲</button>
-          <button class="left" data-dir="left" onclick="setMotorDir('unsupervised','left')" title="Left turn">◀</button>
+          <button class="fwd" data-dir="forward" onclick="setMotorDir('unsupervised','forward')" title="Forward — drives in the direction the bus is currently facing">▲</button>
+          <button class="left" data-dir="left" onclick="setMotorDir('unsupervised','left')" title="Left — turns the bus left relative to its current facing">◀</button>
           <button class="stop" data-dir="stop" onclick="setMotorDir('unsupervised','stop')" title="Stop">■</button>
-          <button class="right" data-dir="right" onclick="setMotorDir('unsupervised','right')" title="Right turn">▶</button>
-          <button class="back" data-dir="backward" onclick="setMotorDir('unsupervised','backward')" title="Backward">▼</button>
+          <button class="right" data-dir="right" onclick="setMotorDir('unsupervised','right')" title="Right — turns the bus right relative to its current facing">▶</button>
+          <button class="back" data-dir="backward" onclick="setMotorDir('unsupervised','backward')" title="Backward — drives opposite the direction the bus is currently facing">▼</button>
         </div>
         <div class="motor-readout">
           <div class="motor-icon-wrap">
@@ -673,6 +681,7 @@
           <div class="motor-substatus" id="motorSubstatus-unsupervised">Double motor idle</div>
         </div>
       </div>
+      <p class="hint dpad-legend">▲ Forward / ▼ Backward drive along whichever way the bus is currently facing (opposite for backward) — they're not fixed compass directions. ◀ Left / ▶ Right turn 90° relative to that facing.</p>
       <div class="ble-row">
         <button class="ble-connect-btn" id="bleConnectBtn-unsupervised" onclick="connectMotorBluetooth()">🔵 Connect Real Motor</button>
         <span class="ble-status-text" id="bleStatusText-unsupervised">Not connected — driving the visual simulation only</span>
@@ -731,6 +740,10 @@
   // stops or turns (a "corner"), and the live current position extends the
   // last segment each frame while driving, so the line grows continuously.
   let routeTrail = [{ x: robotX, y: robotY }];
+  // The autopilot's actual driven path along the predicted route — grows the
+  // same way as routeTrail, but kept separate so autopiloting a predicted
+  // route never overwrites the solid blue trail left by the trained route.
+  let autopilotTrail = [];
   const ROBOT_LINEAR_SPEED = 70; // px/sec
   const FACING_ORDER = ['up', 'right', 'down', 'left']; // clockwise
   const FACING_ANGLE = { up: 0, right: Math.PI / 2, down: Math.PI, left: -Math.PI / 2 };
@@ -775,28 +788,24 @@
     return [a, { x: ra.coord, y: midY }, { x: rb.coord, y: midY }, b];
   }
 
-  // Draws a route as a connected on-road path through an ordered list of stops.
-  // Draws a route as a solid, continuous on-road path through an ordered
-  // list of stops — every corner lies on a real intersection, so this is a
-  // path a real bus could actually drive turn-by-turn. Arrowheads along the
-  // way show the direction of travel.
-  function drawRoutePath(orderedPoints, color, dashed) {
-    if (orderedPoints.length < 2) return;
-
-    // Flatten into one continuous list of waypoints (shared corners aren't
-    // duplicated), so the whole route renders as a single connected path.
-    const waypoints = [orderedPoints[0]];
-    for (let i = 0; i < orderedPoints.length - 1; i++) {
-      const seg = roadPathBetween(orderedPoints[i], orderedPoints[i + 1]);
-      for (let j = 1; j < seg.length; j++) waypoints.push(seg[j]);
-    }
+  // Draws the predicted route as it's actually being autopiloted: a dashed
+  // gold line with direction arrows that grows corner-by-corner as the bus
+  // drives it, plus a live segment extending to the current position while
+  // it's moving — it never jumps straight to the full route up front, and
+  // it never touches routeTrail, so the solid blue line from the originally
+  // trained route stays put underneath it.
+  function drawAutopilotTrail() {
+    if (predictedOrder.length === 0) return;
+    const waypoints = autopilotTrail.slice();
+    if (autopilotActive) waypoints.push({ x: robotX, y: robotY });
+    if (waypoints.length < 2) return;
 
     ctx.save();
-    ctx.strokeStyle = color;
+    ctx.strokeStyle = '#facc15';
     ctx.lineWidth = 3;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    if (dashed) ctx.setLineDash([7, 6]);
+    ctx.setLineDash([7, 6]);
     ctx.beginPath();
     ctx.moveTo(waypoints[0].x, waypoints[0].y);
     for (let i = 1; i < waypoints.length; i++) ctx.lineTo(waypoints[i].x, waypoints[i].y);
@@ -804,10 +813,10 @@
     ctx.setLineDash([]);
     ctx.restore();
 
-    // Direction arrows at the midpoint of each leg, showing which way a bus
-    // following this route would be driving.
+    // Direction arrows at the midpoint of each leg, showing which way the
+    // bus drove.
     for (let i = 0; i < waypoints.length - 1; i++) {
-      drawDirectionArrow(waypoints[i], waypoints[i + 1], color);
+      drawDirectionArrow(waypoints[i], waypoints[i + 1], '#facc15');
     }
   }
 
@@ -1087,24 +1096,22 @@
     points = [];
     visitedRoute = [];
     predictedOrder = [];
-    routeTrail = [{ x: robotX, y: robotY }];
     currentlyNearStops = new Set();
     renderRouteLog();
     disableRouteModelUi();
     updateStatus();
-    draw();
+    resetRobotPosition();
   }
 
   function clearRoute() {
     if (autopilotActive) { stopAutopilot(); driveRealMotor('stop'); }
     visitedRoute = [];
     predictedOrder = [];
-    routeTrail = [{ x: robotX, y: robotY }];
     currentlyNearStops = new Set();
     renderRouteLog();
     disableRouteModelUi();
     updateStatus();
-    draw();
+    resetRobotPosition();
   }
 
   function disableRouteModelUi() {
@@ -1126,6 +1133,12 @@
     }
     const trainBtn = document.getElementById('trainBtn');
     if (trainBtn) trainBtn.disabled = visitedRoute.length < 3;
+
+    // Once a route's been started, resetting the bus position on its own
+    // would leave visitedRoute referring to stops behind a bus that's no
+    // longer there — go through "Clear Route" instead, which resets both.
+    const resetBusBtn = document.getElementById('resetBusPositionBtn');
+    if (resetBusBtn) resetBusBtn.disabled = visitedRoute.length > 0;
   }
 
   // Renders the "route so far" chip list as the bus visits stops in order.
@@ -1352,7 +1365,10 @@
     if (predictedOrder.length === 0) return;
     stopAutopilot();
 
-    resetRobotPosition(); // bus starts from the known starting spot
+    // Bus starts from the known starting spot, but the trained route's
+    // blue trail must stay visible, so only the position is reset here.
+    resetRobotPositionOnly();
+    autopilotTrail = [{ x: robotX, y: robotY }];
 
     autopilotTabId = tabId;
     const built = buildAutopilotRoute();
@@ -1432,7 +1448,7 @@
     if (remaining <= dist) {
       robotX = target.x;
       robotY = target.y;
-      routeTrail.push({ x: robotX, y: robotY });
+      autopilotTrail.push({ x: robotX, y: robotY });
       draw();
 
       driveRealMotor('stop');
@@ -1478,8 +1494,8 @@
     drawRoadMap();
 
     // route lines, drawn under the pins/badges so the stops stay legible
-    drawTrailPath(); // the bus's actual continuous driven path
-    drawRoutePath(predictedOrder, '#facc15', true); // the model's suggested route — a real drivable path
+    drawTrailPath(); // the trained route's actual continuous driven path (blue)
+    drawAutopilotTrail(); // the predicted route, growing as the bus autopilots it (dashed gold)
 
     // draw labeled bus stops on top
     for (const p of points) {
@@ -1738,14 +1754,22 @@
     }
   }
 
-  function resetRobotPosition() {
-    if (autopilotActive) { stopAutopilot(); driveRealMotor('stop'); }
+  // Repositions the bus only — leaves routeTrail (the trained route's blue
+  // line) untouched, since autopilot needs the bus back at its starting
+  // spot without erasing that line.
+  function resetRobotPositionOnly() {
     robotX = ROADS_V[0];
     robotY = ROADS_H[0];
     robotFacing = 'right';
     departedIntersection = true;
     pendingTurn = null;
+  }
+
+  function resetRobotPosition() {
+    if (autopilotActive) { stopAutopilot(); driveRealMotor('stop'); }
+    resetRobotPositionOnly();
     routeTrail = [{ x: robotX, y: robotY }];
+    autopilotTrail = [];
     currentlyNearStops = new Set();
     draw();
   }
@@ -1992,7 +2016,7 @@
   function driveRealMotor(dir) {
     if (!writeChar) return;
     if (dir === 'stop') { stopRealMotor(); return; }
-    const POWER = { forward: [70, 70], backward: [-70, -70] }[dir];
+    const POWER = { forward: [50, 50], backward: [-50, -50] }[dir];
     if (!POWER) return;
     const speeds = [POWER[0], POWER[1] * MOTOR_2_INVERT];
     for (const [mask, signedSpeed] of [[1, speeds[0]], [2, speeds[1]]]) {
