@@ -1500,6 +1500,12 @@
     else if (robotFacing === 'up') robotY -= dist;
     else if (robotFacing === 'down') robotY += dist;
 
+    // Same road-network clamp stepRobot() applies to manual driving — the
+    // Unsupervised tab only ever drives via autopilot now, so without this
+    // here too, its bus had no protection against overshooting off the map.
+    robotX = Math.max(ROAD_MIN_X, Math.min(ROAD_MAX_X, robotX));
+    robotY = Math.max(ROAD_MIN_Y, Math.min(ROAD_MAX_Y, robotY));
+
     draw();
     autopilotFrame = requestAnimationFrame(autopilotDriveStep);
   }
