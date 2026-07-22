@@ -1142,17 +1142,18 @@
     const trainBtn = document.getElementById('trainBtn');
     if (trainBtn) trainBtn.disabled = visitedRoute.length < 3;
 
-    // Once a route's been started, resetting the bus position on its own
-    // would leave visitedRoute referring to stops behind a bus that's no
+    // Once the model's been trained, resetting the bus position on its own
+    // would leave the trained route's blue trail behind a bus that's no
     // longer there — go through "Clear Route" instead, which resets both.
+    // A demonstration still in progress (not yet trained) is fine to reset.
     const resetBusBtn = document.getElementById('resetBusPositionBtn');
-    if (resetBusBtn) resetBusBtn.disabled = visitedRoute.length > 0;
+    if (resetBusBtn) resetBusBtn.disabled = routeModel !== null;
 
     // Same protection for the Unsupervised tab's reset button — it's the
-    // same shared bus, so it must not be free to discard an in-progress
-    // demonstrated route either.
+    // same shared bus, so it must not be free to discard a trained route
+    // either.
     const resetBusBtnUnsup = document.getElementById('resetBusPositionBtnUnsup');
-    if (resetBusBtnUnsup) resetBusBtnUnsup.disabled = visitedRoute.length > 0;
+    if (resetBusBtnUnsup) resetBusBtnUnsup.disabled = routeModel !== null;
   }
 
   // Renders the "route so far" chip list as the bus visits stops in order.
@@ -1246,6 +1247,7 @@
     const resultEl = document.getElementById('predictResult');
     if (resultEl) resultEl.innerHTML = '';
 
+    updateStatus(); // now that routeModel is set, disable the reset-bus-position buttons
     draw();
   }
 
@@ -1343,6 +1345,10 @@
   // run — gold order badges only appear for stops up to this count, so they
   // reveal one at a time as the bus reaches them instead of all at once.
   let autopilotStopsReached = 0;
+  // 'forward' or 'backward' — a target directly behind the bus is reached by
+  // backing up along the same road, not by physically turning around (a
+  // 180° pivot needs an intersection, which a mid-road stop often isn't).
+  let autopilotDriveDir = 'forward';
 
   function facingNeededFor(from, to) {
     const dx = to.x - from.x, dy = to.y - from.y;
@@ -1370,6 +1376,17 @@
     return autopilotTabId === 'unsupervised' ? uPredictedOrder : predictedOrder;
   }
 
+  // Clamping once here, when each waypoint is built, keeps every drive
+  // target on the map before the bus ever starts moving toward it — safer
+  // than clamping the live position every frame, which fights the exact-
+  // arrival distance tracking and can leave the bus stuck instead of moving.
+  function clampToRoadBounds(p) {
+    return {
+      x: Math.max(ROAD_MIN_X, Math.min(ROAD_MAX_X, p.x)),
+      y: Math.max(ROAD_MIN_Y, Math.min(ROAD_MAX_Y, p.y))
+    };
+  }
+
   function buildAutopilotRoute() {
     const waypoints = [{ x: robotX, y: robotY }];
     const stopFlags = [false];
@@ -1377,7 +1394,7 @@
     for (const stop of currentPredictedOrder()) {
       const seg = roadPathBetween(prev, stop);
       for (let i = 1; i < seg.length; i++) {
-        waypoints.push(seg[i]);
+        waypoints.push(clampToRoadBounds(seg[i]));
         stopFlags.push(i === seg.length - 1);
       }
       prev = stop;
@@ -1395,6 +1412,7 @@
     resetRobotPositionOnly();
     autopilotTrail = [{ x: robotX, y: robotY }];
     autopilotStopsReached = 0;
+    autopilotDriveDir = 'forward';
 
     autopilotTabId = tabId;
     const built = buildAutopilotRoute();
@@ -1444,14 +1462,26 @@
     }
     const target = autopilotWaypoints[autopilotIndex];
     const needed = facingNeededFor({ x: robotX, y: robotY }, target);
-    const turns = turnSequenceFor(robotFacing, needed);
+
+    // A target exactly behind the bus (180° from its current facing) is
+    // reached by backing up — no turn, and no need to be at an intersection.
+    const idxC = FACING_ORDER.indexOf(robotFacing);
+    const idxN = FACING_ORDER.indexOf(needed);
+    const isBehind = ((idxN - idxC + 4) % 4) === 2;
+    const turns = isBehind ? [] : turnSequenceFor(robotFacing, needed);
+    const driveDir = isBehind ? 'backward' : 'forward';
 
     const startDriving = () => {
       if (!autopilotActive) return;
-      setDpadUi(autopilotTabId, 'forward');
-      driveRealMotor('forward');
+      autopilotDriveDir = driveDir;
+      setDpadUi(autopilotTabId, driveDir);
+      driveRealMotor(driveDir);
       const statusEl = document.getElementById('motorStatus-' + autopilotTabId);
-      if (statusEl) statusEl.textContent = '🚌 Autopilot: driving predicted route';
+      if (statusEl) {
+        statusEl.textContent = driveDir === 'backward'
+          ? '🚌 Autopilot: backing up to next stop'
+          : '🚌 Autopilot: driving predicted route';
+      }
       autopilotLastTime = null;
       autopilotFrame = requestAnimationFrame(autopilotDriveStep);
     };
@@ -1495,10 +1525,11 @@
       return;
     }
 
-    if (robotFacing === 'left') robotX -= dist;
-    else if (robotFacing === 'right') robotX += dist;
-    else if (robotFacing === 'up') robotY -= dist;
-    else if (robotFacing === 'down') robotY += dist;
+    const sign = autopilotDriveDir === 'backward' ? -1 : 1;
+    if (robotFacing === 'left') robotX -= dist * sign;
+    else if (robotFacing === 'right') robotX += dist * sign;
+    else if (robotFacing === 'up') robotY -= dist * sign;
+    else if (robotFacing === 'down') robotY += dist * sign;
 
     draw();
     autopilotFrame = requestAnimationFrame(autopilotDriveStep);
@@ -2619,13 +2650,18 @@
     currentDriveDir = 'stop';
     if (driveAnimFrame) { cancelAnimationFrame(driveAnimFrame); driveAnimFrame = null; lastFrameTime = null; }
     driveRealMotor('stop');
-    routeTrail.push({ x: robotX, y: robotY }); // corner waypoint
 
     const statusEl = document.getElementById('motorStatus-' + tabId);
     const subEl = document.getElementById('motorSubstatus-' + tabId);
 
     const turned = attemptTurn(dir);
     if (turned) {
+      // Recorded only now, after attemptTurn() has snapped robotX/robotY
+      // exactly onto the intersection — pushing beforehand recorded
+      // wherever the bus happened to be within the detection tolerance,
+      // which drew a diagonal jog in the blue trail instead of a clean
+      // corner exactly at the intersection.
+      routeTrail.push({ x: robotX, y: robotY });
       driveRealTurn(dir);
       setDpadUi(tabId, dir);
       if (statusEl) { statusEl.textContent = MOTOR_LABELS[dir].status; statusEl.classList.add('moving'); }
