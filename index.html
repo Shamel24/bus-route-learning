@@ -37,9 +37,9 @@
 
   h1 {
     text-align: center;
-    font-size: 1.8rem;
+    font-size: 1.9rem;
     margin-bottom: 24px;
-    font-weight: 600;
+    font-weight: 700;
   }
 
   .tabs {
@@ -47,8 +47,9 @@
     gap: 8px;
     background: var(--panel);
     padding: 6px;
-    border-radius: 12px;
+    border-radius: 14px;
     border: 1px solid var(--border);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
   }
 
   .tab-btn {
@@ -56,7 +57,7 @@
     padding: 14px 20px;
     background: transparent;
     border: none;
-    border-radius: 8px;
+    border-radius: 9px;
     color: var(--muted);
     font-size: 1rem;
     font-weight: 600;
@@ -71,19 +72,42 @@
   .tab-btn.active {
     background: var(--accent);
     color: white;
+    box-shadow: 0 4px 14px rgba(108, 140, 255, 0.4);
   }
 
   .tab-btn.active.unsupervised {
     background: var(--accent2);
+    box-shadow: 0 4px 14px rgba(255, 140, 108, 0.4);
   }
 
   .panel {
+    position: relative;
+    overflow: hidden;
     margin-top: 20px;
-    background: var(--panel);
+    background: linear-gradient(180deg, rgba(108, 140, 255, 0.05), transparent 40%), var(--panel);
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 14px;
     padding: 28px;
     display: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--accent);
+  }
+
+  .panel.unsupervised {
+    background: linear-gradient(180deg, rgba(255, 140, 108, 0.05), transparent 40%), var(--panel);
+  }
+
+  .panel.unsupervised::before {
+    background: var(--accent2);
   }
 
   .panel.active {
@@ -103,7 +127,28 @@
   .panel ul {
     color: var(--text);
     line-height: 1.8;
+    list-style: none;
+    padding-left: 0;
+  }
+
+  .panel ul li {
+    position: relative;
     padding-left: 20px;
+  }
+
+  .panel ul li::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 0.65em;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .panel.unsupervised ul li::before {
+    background: var(--accent2);
   }
 
   .tag {
@@ -186,6 +231,11 @@
     font-size: 0.88rem;
   }
 
+  .class-btn:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+  }
+
   .class-btn .dot {
     width: 10px;
     height: 10px;
@@ -266,12 +316,18 @@
     font-weight: 600;
     cursor: pointer;
     font-size: 0.9rem;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+
+  .trainer-controls button:not(:disabled):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
   }
 
   #trainBtn { background: var(--accent); color: white; }
   #trainBtn:disabled { background: #3a3f4f; color: var(--muted); cursor: not-allowed; }
-  #clearBtn, #undoBtn { background: transparent; color: var(--muted); border: 1px solid var(--border) !important; }
-  #resetBusPositionBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+  #clearBtn, #undoBtn, #uClearBtn, #uUndoBtn { background: transparent; color: var(--muted); border: 1px solid var(--border) !important; }
+  #resetBusPositionBtn:disabled, #resetBusPositionBtnUnsup:disabled { opacity: 0.4; cursor: not-allowed; }
 
   .status-row {
     display: flex;
@@ -309,8 +365,8 @@
 
   #routeModelStatus.trained { color: var(--green); }
 
-  #predictRouteBtn { background: #a78bfa; color: white; }
-  #predictRouteBtn:disabled { background: #3a3f4f; color: var(--muted); cursor: not-allowed; }
+  #predictRouteBtn, #uPredictRouteBtn { background: #a78bfa; color: white; }
+  #predictRouteBtn:disabled, #uPredictRouteBtn:disabled { background: #3a3f4f; color: var(--muted); cursor: not-allowed; }
 
   #predictResult {
     margin-top: 10px;
@@ -393,7 +449,7 @@
     transition: all 0.12s ease;
   }
 
-  .dpad button:hover { border-color: var(--accent); }
+  .dpad button:hover { border-color: var(--accent); transform: translateY(-1px); }
 
   .dpad button.active {
     background: var(--accent);
@@ -448,9 +504,14 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    transition: background 0.15s ease, transform 0.12s ease, box-shadow 0.12s ease;
   }
 
-  .ble-connect-btn:hover { background: rgba(59, 130, 246, 0.22); }
+  .ble-connect-btn:hover {
+    background: rgba(59, 130, 246, 0.22);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(59, 130, 246, 0.25);
+  }
 
   .ble-connect-btn.connected {
     border-color: var(--green);
@@ -486,7 +547,7 @@
   }
 
   .ble-uuid-field input {
-    width: 100%;
+    width: 6ch;
     background: #0b0d13;
     border: 1px solid var(--border);
     border-radius: 6px;
@@ -513,11 +574,6 @@
     border-radius: 8px;
     cursor: crosshair;
   }
-
-  #uPredictRouteBtn { background: #a78bfa; color: white; }
-  #uPredictRouteBtn:disabled { background: #3a3f4f; color: var(--muted); cursor: not-allowed; }
-  #uClearBtn, #uUndoBtn { background: transparent; color: var(--muted); border: 1px solid var(--border) !important; }
-  #resetBusPositionBtnUnsup:disabled { opacity: 0.4; cursor: not-allowed; }
 
   #uPredictResult {
     margin-top: 10px;
@@ -570,27 +626,27 @@
 
         <div class="motor-column">
           <h3>Motor Controls</h3>
-          <p class="hint">Use the arrow buttons to drive the bus forward, backward, left, or right. This works as a computer animation by default. If you have a real LEGO motor, click "Connect Real Motor" to control it too (only works in Chrome or Edge).</p>
+          <p class="hint">Use the arrow buttons to drive the bus forward, backward, left, or right. If you have a real LEGO motor, click "Connect Real Motor" to control it too (only works in Chrome or Edge). Drives best on a clean surface. The map approximately covers a 2.5 ft by 3.5 ft surface.</p>
           <div class="motor-widget">
             <div class="dpad">
-              <button class="fwd" data-dir="forward" onclick="setMotorDir('supervised','forward')" title="Forward — drives the way the bus is already pointing">▲</button>
-              <button class="left" data-dir="left" onclick="setMotorDir('supervised','left')" title="Left — turns the bus 90° to its left">◀</button>
+              <button class="fwd" data-dir="up" onclick="setMotorDir('supervised','up')" title="Up — turns the bus to face up on the map, then drives that way">▲</button>
+              <button class="left" data-dir="left" onclick="setMotorDir('supervised','left')" title="Left — turns the bus to face left on the map, then drives that way">◀</button>
               <button class="stop" data-dir="stop" onclick="setMotorDir('supervised','stop')" title="Stop">■</button>
-              <button class="right" data-dir="right" onclick="setMotorDir('supervised','right')" title="Right — turns the bus 90° to its right">▶</button>
-              <button class="back" data-dir="backward" onclick="setMotorDir('supervised','backward')" title="Backward — drives the opposite way the bus is pointing">▼</button>
+              <button class="right" data-dir="right" onclick="setMotorDir('supervised','right')" title="Right — turns the bus to face right on the map, then drives that way">▶</button>
+              <button class="back" data-dir="down" onclick="setMotorDir('supervised','down')" title="Down — turns the bus to face down on the map, then drives that way">▼</button>
             </div>
             <div class="motor-readout">
               <div class="motor-status" id="motorStatus-supervised">Stopped</div>
               <div class="motor-substatus" id="motorSubstatus-supervised">Motors resting</div>
             </div>
           </div>
-          <p class="hint dpad-legend">*▲ Forward, ▼ Backward, ◀ Left, and ▶ Right control the bus relative to the bus's current direction</p>
+          <p class="hint dpad-legend">*▲ Up, ▼ Down, ◀ Left, and ▶ Right always match the map — click one and the bus turns to face that way, then drives one road segment</p>
           <div class="ble-row">
             <button class="ble-connect-btn" id="bleConnectBtn-supervised" onclick="connectMotorBluetooth()">🔵 Connect Real Motor</button>
             <span class="ble-status-text" id="bleStatusText-supervised">Not connected — just showing the computer animation</span>
             <div class="ble-uuid-row">
               <div class="ble-uuid-field">
-                <label for="turnDegreesInput-supervised">Turn Adjustment — the degrees the wheels spins to execute a 90° turn of the physical bus (turn this up if turns are too small, down if too big)</label>
+                <label for="turnDegreesInput-supervised">Turn Adjustment — the degrees the wheels spin to execute a 90° turn, (turn this up if turns are too small, down if too big)</label>
                 <input type="number" id="turnDegreesInput-supervised" min="1" max="1000" step="1" value="155" oninput="setTurnDegrees(this.value)">
               </div>
             </div>
@@ -599,7 +655,7 @@
       </div>
 
       <div class="route-log-wrap">
-        <div class="route-log-label">🚌 Your route so far (drive the bus  to build it):</div>
+        <div class="route-log-label">🚌 Your route so far (drive the bus to build it):</div>
         <div id="routeLog" class="route-log">No stores visited yet — drive the bus to a store to add it.</div>
         <button id="clearRouteBtn" onclick="clearRoute()" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;margin-top:8px;">Clear Route</button>
       </div>
@@ -622,7 +678,7 @@
   <div class="panel unsupervised" id="panel-unsupervised">
     <span class="tag">Unlabeled Data</span>
     <h2>Unsupervised Learning</h2>
-    <p>The computer looks at data that has no answers attached at all. It finds patterns, grouping things together all by itself, without anyone telling it what to look for.</p>
+    <p>The computer looks at data that has no answers attached at all. It finds patterns, grouping things together all by itself.</p>
     <ul>
       <li>Doesn't need labeled examples</li>
       <li>Good for: grouping similar things together, simplifying messy data</li>
@@ -652,7 +708,7 @@
 
         <div class="motor-column">
           <h3>Motor Status</h3>
-          <p class="hint">You can't drive this bus yourself — it only moves on its own, following the route the computer figures out below. If you have a real LEGO motor, click "Connect Real Motor" to have it move along with the bus on screen (only works in Chrome or Edge).</p>
+          <p class="hint">You can't drive this bus yourself — it only moves on its own, following the route the computer figures out below. If you have a real LEGO motor, click "Connect Real Motor" to have it move along with the bus on screen (only works in Chrome or Edge). Drives best on a clean surface. The map approximately covers a 2.5 ft by 3.5 ft surface.</p>
           <div class="motor-widget">
             <div class="motor-readout">
               <div class="motor-status" id="motorStatus-unsupervised">Stopped</div>
@@ -664,7 +720,7 @@
             <span class="ble-status-text" id="bleStatusText-unsupervised">Not connected — just showing the computer animation</span>
             <div class="ble-uuid-row">
               <div class="ble-uuid-field">
-                <label for="turnDegreesInput-unsupervised">Turn Adjustment —the degrees the wheels spins to execute a 90° turn of the physical bus (turn this up if turns are too small, down if too big)</label>
+                <label for="turnDegreesInput-unsupervised">Turn Adjustment — the degrees the wheels spin to execute a 90° turn, (turn this up if turns are too small, down if too big)</label>
                 <input type="number" id="turnDegreesInput-unsupervised" min="1" max="1000" step="1" value="155" oninput="setTurnDegrees(this.value)">
               </div>
             </div>
@@ -685,6 +741,21 @@
 </div>
 
 <script>
+  // ============================================================
+  // Layout of this file, top to bottom:
+  //   1. Supervised tab   — state, shared road/geometry helpers,
+  //                         store-type UI, the trained route model,
+  //                         its autopilot engine, and its canvas drawing.
+  //      (The Unsupervised tab's own state/bus is declared early inside
+  //      this section too — see the note at its declaration for why.)
+  //   2. Unsupervised tab — store-type UI, the K-Means route model,
+  //                         its own independent autopilot engine, and
+  //                         its own canvas drawing.
+  //   3. Shared hardware  — the LEGO BLE motor protocol, and the
+  //                         Supervised tab's manual D-pad dispatch
+  //                         (the only tab with manual driving).
+  // ============================================================
+
   function showTab(name) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -736,7 +807,7 @@
   let driveAnimFrame = null;
   let lastFrameTime = null;
   let writeChar = null; // set once the real motor is connected over Bluetooth
-  let pendingTurn = null; // 'left' | 'right' | null — queued to fire once the next intersection is reached
+  let pendingTurn = null; // 'up' | 'down' | 'left' | 'right' | null — the absolute map direction the bus should turn to face once it reaches the next intersection (queued when a direction button is pressed mid-drive, away from a crossroad)
   let pendingTurnTabId = 'supervised'; // which tab's UI to update when the queued turn actually fires
   let activeDriveTabId = 'supervised'; // which tab's UI to update when auto-stopping at an intersection
   // True from the moment a real 90° pivot is issued until it's presumed
@@ -858,29 +929,31 @@
     // Direction arrows at the midpoint of each leg, showing which way the
     // bus drove.
     for (let i = 0; i < waypoints.length - 1; i++) {
-      drawDirectionArrow(waypoints[i], waypoints[i + 1], '#facc15');
+      drawDirectionArrow(ctx, waypoints[i], waypoints[i + 1], '#facc15');
     }
   }
 
-  function drawDirectionArrow(from, to, color) {
+  // Shared by both tabs' canvases (pass ctx or ctxU) — purely a function of
+  // the target context and the two points, no bus state involved.
+  function drawDirectionArrow(ctxTarget, from, to, color) {
     const mx = (from.x + to.x) / 2, my = (from.y + to.y) / 2;
     const len = Math.hypot(to.x - from.x, to.y - from.y);
     if (len < 12) return; // too short a leg to bother drawing an arrow
     const angle = Math.atan2(to.y - from.y, to.x - from.x);
-    ctx.save();
-    ctx.translate(mx, my);
-    ctx.rotate(angle);
-    ctx.fillStyle = color;
-    ctx.strokeStyle = '#0b0d13';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(7, 0);
-    ctx.lineTo(-4, 5);
-    ctx.lineTo(-4, -5);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
+    ctxTarget.save();
+    ctxTarget.translate(mx, my);
+    ctxTarget.rotate(angle);
+    ctxTarget.fillStyle = color;
+    ctxTarget.strokeStyle = '#0b0d13';
+    ctxTarget.lineWidth = 1;
+    ctxTarget.beginPath();
+    ctxTarget.moveTo(7, 0);
+    ctxTarget.lineTo(-4, 5);
+    ctxTarget.lineTo(-4, -5);
+    ctxTarget.closePath();
+    ctxTarget.fill();
+    ctxTarget.stroke();
+    ctxTarget.restore();
   }
 
   // Draws the bus's actual driven path: the fixed corner waypoints, plus a
@@ -1621,7 +1694,7 @@
   function draw() {
     ctx.clearRect(0, 0, CW, CH);
 
-    drawRoadMap();
+    drawRoadMap(ctx);
 
     // route lines, drawn under the pins/badges so the stops stay legible
     drawTrailPath(); // the trained route's actual continuous driven path (blue)
@@ -1629,44 +1702,47 @@
 
     // draw labeled bus stops on top
     for (const p of points) {
-      drawBusStop(p.x, p.y, CLASS_COLORS[p.label]);
+      drawBusStop(ctx, p.x, p.y, CLASS_COLORS[p.label]);
     }
 
     // visit-order badges (blue) — the route the bus actually drove
     visitedRoute.forEach((p, i) => {
-      drawOrderBadge(p.x - 10, p.y - 13, i + 1, '#38bdf8');
+      drawOrderBadge(ctx, p.x - 10, p.y - 13, i + 1, '#38bdf8');
     });
 
     // predicted-order badges (gold) — revealed one at a time as the bus
     // actually drives past each stop, rather than all up front
     predictedOrder.slice(0, autopilotStopsReached).forEach((p, i) => {
-      drawOrderBadge(p.x + 10, p.y - 13, i + 1, '#facc15');
+      drawOrderBadge(ctx, p.x + 10, p.y - 13, i + 1, '#facc15');
     });
 
     // draw the live motor position on top of everything
     drawRobotMarker();
   }
 
-  function drawOrderBadge(x, y, num, color) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(x, y, 8, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.strokeStyle = '#0b0d13';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    ctx.fillStyle = '#0b0d13';
-    ctx.font = 'bold 9px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(String(num), x, y + 0.5);
-    ctx.restore();
+  // Shared by both tabs' canvases (pass ctx or ctxU).
+  function drawOrderBadge(ctxTarget, x, y, num, color) {
+    ctxTarget.save();
+    ctxTarget.beginPath();
+    ctxTarget.arc(x, y, 8, 0, Math.PI * 2);
+    ctxTarget.fillStyle = color;
+    ctxTarget.fill();
+    ctxTarget.strokeStyle = '#0b0d13';
+    ctxTarget.lineWidth = 1.5;
+    ctxTarget.stroke();
+    ctxTarget.fillStyle = '#0b0d13';
+    ctxTarget.font = 'bold 9px sans-serif';
+    ctxTarget.textAlign = 'center';
+    ctxTarget.textBaseline = 'middle';
+    ctxTarget.fillText(String(num), x, y + 0.5);
+    ctxTarget.restore();
   }
 
-  function drawRoadMap(alpha = 1) {
-    ctx.save();
-    ctx.globalAlpha = alpha;
+  // Shared by both tabs' canvases (pass ctx or ctxU) — draws the road
+  // network for whichever canvas is given.
+  function drawRoadMap(ctxTarget, alpha = 1) {
+    ctxTarget.save();
+    ctxTarget.globalAlpha = alpha;
 
     // Roads are clipped to the bounding box formed by the outermost roads
     // (rather than spanning the full canvas edge-to-edge), so the map reads
@@ -1680,88 +1756,89 @@
     // corners (a visual flourish only; intersection detection, turning, and
     // store snapping all still use the plain straight-line road positions).
     function tracePerimeter() {
-      ctx.beginPath();
-      ctx.moveTo(minX + CORNER_RADIUS, minY);
-      ctx.lineTo(maxX - CORNER_RADIUS, minY);
-      ctx.arcTo(maxX, minY, maxX, minY + CORNER_RADIUS, CORNER_RADIUS);
-      ctx.lineTo(maxX, maxY - CORNER_RADIUS);
-      ctx.arcTo(maxX, maxY, maxX - CORNER_RADIUS, maxY, CORNER_RADIUS);
-      ctx.lineTo(minX + CORNER_RADIUS, maxY);
-      ctx.arcTo(minX, maxY, minX, maxY - CORNER_RADIUS, CORNER_RADIUS);
-      ctx.lineTo(minX, minY + CORNER_RADIUS);
-      ctx.arcTo(minX, minY, minX + CORNER_RADIUS, minY, CORNER_RADIUS);
-      ctx.closePath();
+      ctxTarget.beginPath();
+      ctxTarget.moveTo(minX + CORNER_RADIUS, minY);
+      ctxTarget.lineTo(maxX - CORNER_RADIUS, minY);
+      ctxTarget.arcTo(maxX, minY, maxX, minY + CORNER_RADIUS, CORNER_RADIUS);
+      ctxTarget.lineTo(maxX, maxY - CORNER_RADIUS);
+      ctxTarget.arcTo(maxX, maxY, maxX - CORNER_RADIUS, maxY, CORNER_RADIUS);
+      ctxTarget.lineTo(minX + CORNER_RADIUS, maxY);
+      ctxTarget.arcTo(minX, maxY, minX, maxY - CORNER_RADIUS, CORNER_RADIUS);
+      ctxTarget.lineTo(minX, minY + CORNER_RADIUS);
+      ctxTarget.arcTo(minX, minY, minX + CORNER_RADIUS, minY, CORNER_RADIUS);
+      ctxTarget.closePath();
     }
 
     const innerH = ROADS_H.slice(1, -1);
     const innerV = ROADS_V.slice(1, -1);
 
     // road bed
-    ctx.strokeStyle = '#2c303c';
-    ctx.lineWidth = 14;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+    ctxTarget.strokeStyle = '#2c303c';
+    ctxTarget.lineWidth = 14;
+    ctxTarget.lineCap = 'round';
+    ctxTarget.lineJoin = 'round';
     tracePerimeter();
-    ctx.stroke();
-    ctx.lineCap = 'butt';
+    ctxTarget.stroke();
+    ctxTarget.lineCap = 'butt';
     innerH.forEach(y => {
-      ctx.beginPath(); ctx.moveTo(minX, y); ctx.lineTo(maxX, y); ctx.stroke();
+      ctxTarget.beginPath(); ctxTarget.moveTo(minX, y); ctxTarget.lineTo(maxX, y); ctxTarget.stroke();
     });
     innerV.forEach(x => {
-      ctx.beginPath(); ctx.moveTo(x, minY); ctx.lineTo(x, maxY); ctx.stroke();
+      ctxTarget.beginPath(); ctxTarget.moveTo(x, minY); ctxTarget.lineTo(x, maxY); ctxTarget.stroke();
     });
 
     // dashed center lines
-    ctx.strokeStyle = '#565c6e';
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([6, 6]);
+    ctxTarget.strokeStyle = '#565c6e';
+    ctxTarget.lineWidth = 1.5;
+    ctxTarget.setLineDash([6, 6]);
     tracePerimeter();
-    ctx.stroke();
+    ctxTarget.stroke();
     innerH.forEach(y => {
-      ctx.beginPath(); ctx.moveTo(minX, y); ctx.lineTo(maxX, y); ctx.stroke();
+      ctxTarget.beginPath(); ctxTarget.moveTo(minX, y); ctxTarget.lineTo(maxX, y); ctxTarget.stroke();
     });
     innerV.forEach(x => {
-      ctx.beginPath(); ctx.moveTo(x, minY); ctx.lineTo(x, maxY); ctx.stroke();
+      ctxTarget.beginPath(); ctxTarget.moveTo(x, minY); ctxTarget.lineTo(x, maxY); ctxTarget.stroke();
     });
-    ctx.setLineDash([]);
+    ctxTarget.setLineDash([]);
 
     // faint "city block" grid for texture, also clipped to the bounded area
-    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
-    ctx.lineWidth = 1;
+    ctxTarget.strokeStyle = 'rgba(255,255,255,0.03)';
+    ctxTarget.lineWidth = 1;
     for (let gx = minX; gx < maxX; gx += 20) {
-      ctx.beginPath(); ctx.moveTo(gx, minY); ctx.lineTo(gx, maxY); ctx.stroke();
+      ctxTarget.beginPath(); ctxTarget.moveTo(gx, minY); ctxTarget.lineTo(gx, maxY); ctxTarget.stroke();
     }
     for (let gy = minY; gy < maxY; gy += 20) {
-      ctx.beginPath(); ctx.moveTo(minX, gy); ctx.lineTo(maxX, gy); ctx.stroke();
+      ctxTarget.beginPath(); ctxTarget.moveTo(minX, gy); ctxTarget.lineTo(maxX, gy); ctxTarget.stroke();
     }
 
-    ctx.restore();
+    ctxTarget.restore();
   }
 
-  // draws a bus-stop-style marker: a small pole with a circular sign on top
-  function drawBusStop(x, y, color) {
-    ctx.save();
+  // Draws a bus-stop-style marker: a small pole with a circular sign on top.
+  // Shared by both tabs' canvases (pass ctx or ctxU).
+  function drawBusStop(ctxTarget, x, y, color) {
+    ctxTarget.save();
     // pole
-    ctx.strokeStyle = '#0b0d13';
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.moveTo(x, y + 2);
-    ctx.lineTo(x, y + 10);
-    ctx.stroke();
+    ctxTarget.strokeStyle = '#0b0d13';
+    ctxTarget.lineWidth = 2.5;
+    ctxTarget.beginPath();
+    ctxTarget.moveTo(x, y + 2);
+    ctxTarget.lineTo(x, y + 10);
+    ctxTarget.stroke();
 
     // sign (circle)
-    ctx.beginPath();
-    ctx.arc(x, y - 3, 7, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.strokeStyle = '#0b0d13';
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    ctxTarget.beginPath();
+    ctxTarget.arc(x, y - 3, 7, 0, Math.PI * 2);
+    ctxTarget.fillStyle = color;
+    ctxTarget.fill();
+    ctxTarget.strokeStyle = '#0b0d13';
+    ctxTarget.lineWidth = 2;
+    ctxTarget.stroke();
 
     // little "bus" glyph mark (simple rectangle) inside the sign
-    ctx.fillStyle = '#0b0d13';
-    ctx.fillRect(x - 3, y - 6, 6, 4);
-    ctx.restore();
+    ctxTarget.fillStyle = '#0b0d13';
+    ctxTarget.fillRect(x - 3, y - 6, 6, 4);
+    ctxTarget.restore();
   }
 
   // Draws the live motor position/heading — filled green while the real
@@ -1779,19 +1856,15 @@
       ctx.restore();
     }
 
+    // Drawn upright regardless of facing — an emoji glyph reads as
+    // "upside-down bus" when rotated 180°, unlike the old plain triangle,
+    // so it stays fixed instead of rotating with FACING_ANGLE.
     ctx.save();
     ctx.translate(robotX, robotY);
-    ctx.rotate(FACING_ANGLE[robotFacing]);
-    ctx.beginPath();
-    ctx.moveTo(0, -12);
-    ctx.lineTo(8, 9);
-    ctx.lineTo(-8, 9);
-    ctx.closePath();
-    ctx.fillStyle = connected ? '#4ade80' : '#38bdf8';
-    ctx.fill();
-    ctx.strokeStyle = '#0b0d13';
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    ctx.font = '22px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🚌', 0, 1);
     ctx.restore();
   }
 
@@ -1869,7 +1942,7 @@
         const dir = pendingTurn;
         const tabId = pendingTurnTabId;
         pendingTurn = null;
-        performTurn(tabId, dir); // stops driving/animation and executes the pivot itself
+        headTowardDirection(tabId, dir); // stops driving/animation and resolves the turn + drive itself
       } else {
         stopAtIntersection(activeDriveTabId);
       }
@@ -2420,117 +2493,6 @@
   // ---- Drawing for this tab's own canvas — its own independent bus/trail,
   // rendered onto its own canvas.
 
-  function uDrawRoadMap(alpha = 1) {
-    ctxU.save();
-    ctxU.globalAlpha = alpha;
-    const minX = ROADS_V[0], maxX = ROADS_V[ROADS_V.length - 1];
-    const minY = ROADS_H[0], maxY = ROADS_H[ROADS_H.length - 1];
-    const CORNER_RADIUS = 26;
-
-    function tracePerimeter() {
-      ctxU.beginPath();
-      ctxU.moveTo(minX + CORNER_RADIUS, minY);
-      ctxU.lineTo(maxX - CORNER_RADIUS, minY);
-      ctxU.arcTo(maxX, minY, maxX, minY + CORNER_RADIUS, CORNER_RADIUS);
-      ctxU.lineTo(maxX, maxY - CORNER_RADIUS);
-      ctxU.arcTo(maxX, maxY, maxX - CORNER_RADIUS, maxY, CORNER_RADIUS);
-      ctxU.lineTo(minX + CORNER_RADIUS, maxY);
-      ctxU.arcTo(minX, maxY, minX, maxY - CORNER_RADIUS, CORNER_RADIUS);
-      ctxU.lineTo(minX, minY + CORNER_RADIUS);
-      ctxU.arcTo(minX, minY, minX + CORNER_RADIUS, minY, CORNER_RADIUS);
-      ctxU.closePath();
-    }
-
-    const innerH = ROADS_H.slice(1, -1);
-    const innerV = ROADS_V.slice(1, -1);
-
-    ctxU.strokeStyle = '#2c303c';
-    ctxU.lineWidth = 14;
-    ctxU.lineCap = 'round';
-    ctxU.lineJoin = 'round';
-    tracePerimeter();
-    ctxU.stroke();
-    ctxU.lineCap = 'butt';
-    innerH.forEach(y => { ctxU.beginPath(); ctxU.moveTo(minX, y); ctxU.lineTo(maxX, y); ctxU.stroke(); });
-    innerV.forEach(x => { ctxU.beginPath(); ctxU.moveTo(x, minY); ctxU.lineTo(x, maxY); ctxU.stroke(); });
-
-    ctxU.strokeStyle = '#565c6e';
-    ctxU.lineWidth = 1.5;
-    ctxU.setLineDash([6, 6]);
-    tracePerimeter();
-    ctxU.stroke();
-    innerH.forEach(y => { ctxU.beginPath(); ctxU.moveTo(minX, y); ctxU.lineTo(maxX, y); ctxU.stroke(); });
-    innerV.forEach(x => { ctxU.beginPath(); ctxU.moveTo(x, minY); ctxU.lineTo(x, maxY); ctxU.stroke(); });
-    ctxU.setLineDash([]);
-
-    ctxU.strokeStyle = 'rgba(255,255,255,0.03)';
-    ctxU.lineWidth = 1;
-    for (let gx = minX; gx < maxX; gx += 20) { ctxU.beginPath(); ctxU.moveTo(gx, minY); ctxU.lineTo(gx, maxY); ctxU.stroke(); }
-    for (let gy = minY; gy < maxY; gy += 20) { ctxU.beginPath(); ctxU.moveTo(minX, gy); ctxU.lineTo(maxX, gy); ctxU.stroke(); }
-
-    ctxU.restore();
-  }
-
-  function uDrawBusStop(x, y, color) {
-    ctxU.save();
-    ctxU.strokeStyle = '#0b0d13';
-    ctxU.lineWidth = 2.5;
-    ctxU.beginPath();
-    ctxU.moveTo(x, y + 2);
-    ctxU.lineTo(x, y + 10);
-    ctxU.stroke();
-
-    ctxU.beginPath();
-    ctxU.arc(x, y - 3, 7, 0, Math.PI * 2);
-    ctxU.fillStyle = color;
-    ctxU.fill();
-    ctxU.strokeStyle = '#0b0d13';
-    ctxU.lineWidth = 2;
-    ctxU.stroke();
-
-    ctxU.fillStyle = '#0b0d13';
-    ctxU.fillRect(x - 3, y - 6, 6, 4);
-    ctxU.restore();
-  }
-
-  function uDrawOrderBadge(x, y, num, color) {
-    ctxU.save();
-    ctxU.beginPath();
-    ctxU.arc(x, y, 8, 0, Math.PI * 2);
-    ctxU.fillStyle = color;
-    ctxU.fill();
-    ctxU.strokeStyle = '#0b0d13';
-    ctxU.lineWidth = 1.5;
-    ctxU.stroke();
-    ctxU.fillStyle = '#0b0d13';
-    ctxU.font = 'bold 9px sans-serif';
-    ctxU.textAlign = 'center';
-    ctxU.textBaseline = 'middle';
-    ctxU.fillText(String(num), x, y + 0.5);
-    ctxU.restore();
-  }
-
-  function uDrawDirectionArrow(from, to, color) {
-    const mx = (from.x + to.x) / 2, my = (from.y + to.y) / 2;
-    const len = Math.hypot(to.x - from.x, to.y - from.y);
-    if (len < 12) return;
-    const angle = Math.atan2(to.y - from.y, to.x - from.x);
-    ctxU.save();
-    ctxU.translate(mx, my);
-    ctxU.rotate(angle);
-    ctxU.fillStyle = color;
-    ctxU.strokeStyle = '#0b0d13';
-    ctxU.lineWidth = 1;
-    ctxU.beginPath();
-    ctxU.moveTo(7, 0);
-    ctxU.lineTo(-4, 5);
-    ctxU.lineTo(-4, -5);
-    ctxU.closePath();
-    ctxU.fill();
-    ctxU.stroke();
-    ctxU.restore();
-  }
-
   function uDrawTrailPath() {
     const pts = uRouteTrail.slice();
     if (pts.length < 2) return;
@@ -2566,7 +2528,7 @@
     ctxU.restore();
 
     for (let i = 0; i < waypoints.length - 1; i++) {
-      uDrawDirectionArrow(waypoints[i], waypoints[i + 1], '#facc15');
+      drawDirectionArrow(ctxU, waypoints[i], waypoints[i + 1], '#facc15');
     }
   }
 
@@ -2583,32 +2545,27 @@
       ctxU.restore();
     }
 
+    // Drawn upright regardless of facing — see the matching note in
+    // drawRobotMarker() above.
     ctxU.save();
     ctxU.translate(uRobotX, uRobotY);
-    ctxU.rotate(FACING_ANGLE[uRobotFacing]);
-    ctxU.beginPath();
-    ctxU.moveTo(0, -12);
-    ctxU.lineTo(8, 9);
-    ctxU.lineTo(-8, 9);
-    ctxU.closePath();
-    ctxU.fillStyle = connected ? '#4ade80' : '#38bdf8';
-    ctxU.fill();
-    ctxU.strokeStyle = '#0b0d13';
-    ctxU.lineWidth = 2;
-    ctxU.stroke();
+    ctxU.font = '22px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
+    ctxU.textAlign = 'center';
+    ctxU.textBaseline = 'middle';
+    ctxU.fillText('🚌', 0, 1);
     ctxU.restore();
   }
 
   function drawUnsup() {
     ctxU.clearRect(0, 0, CW, CH);
-    uDrawRoadMap();
+    drawRoadMap(ctxU);
     uDrawTrailPath();
     uDrawAutopilotTrail();
 
-    for (const p of uPoints) uDrawBusStop(p.x, p.y, CLASS_COLORS[p.label]);
+    for (const p of uPoints) drawBusStop(ctxU, p.x, p.y, CLASS_COLORS[p.label]);
 
     uPredictedOrder.slice(0, uAutopilotStopsReached).forEach((p, i) => {
-      uDrawOrderBadge(p.x + 10, p.y - 13, i + 1, '#facc15');
+      drawOrderBadge(ctxU, p.x + 10, p.y - 13, i + 1, '#facc15');
     });
 
     uDrawRobotMarker();
@@ -2631,12 +2588,21 @@
     unsupervised: 'stop'
   };
 
+  // Status shown once the bus is actually driving in an absolute map
+  // direction (after any needed turn has finished).
   const MOTOR_LABELS = {
-    forward:  { status: 'Driving forward',  sub: 'Following the road, straight ahead' },
-    backward: { status: 'Driving backward', sub: 'Reversing along the road' },
-    left:     { status: 'Turning left',     sub: '90° pivot at the intersection' },
-    right:    { status: 'Turning right',    sub: '90° pivot at the intersection' },
-    stop:     { status: 'Stopped',          sub: 'Motors resting' }
+    up:    { status: 'Driving up',    sub: 'Following the road upward' },
+    down:  { status: 'Driving down',  sub: 'Following the road downward' },
+    left:  { status: 'Driving left',  sub: 'Following the road to the left' },
+    right: { status: 'Driving right', sub: 'Following the road to the right' },
+    stop:  { status: 'Stopped',       sub: 'Motors resting' }
+  };
+
+  // Status shown mid-pivot, before the bus starts driving in its new
+  // direction — keyed by the physical turn direction, not the target facing.
+  const TURN_LABELS = {
+    left:  { status: 'Turning left',  sub: 'Quarter-turn at the crossroad' },
+    right: { status: 'Turning right', sub: 'Quarter-turn at the crossroad' }
   };
 
   // LEGO Education BLE protocol (confirmed against a working implementation)
@@ -2908,6 +2874,9 @@
     setTimeout(stopRealMotor, TURN_SAFETY_TIMEOUT_MS);
   }
 
+  // ---- Manual D-pad driving (Supervised tab only — Unsupervised has no
+  // manual controls, it only ever moves via its own autopilot above) ----
+
   // Updates the D-pad highlight for one tab to reflect whichever direction
   // is actually happening right now.
   function setDpadUi(tabId, activeDir) {
@@ -2919,18 +2888,76 @@
     }
   }
 
-  // Executes a 90° turn right now — called either immediately (already at
-  // an intersection) or from the drive loop once a queued turn's
-  // intersection is reached. Always stops any continuous driving first.
-  function performTurn(tabId, dir) {
-    currentDriveDir = 'stop';
-    if (driveAnimFrame) { cancelAnimationFrame(driveAnimFrame); driveAnimFrame = null; lastFrameTime = null; }
-    driveRealMotor('stop');
+  // Turns the bus to face an absolute map direction, then starts it driving
+  // that way — the core of the "each arrow matches the map" D-pad model.
+  // If it needs to turn but isn't at an intersection yet, the turn is
+  // queued for when it gets there (see pendingTurn and the drive loop
+  // above); if it can turn right now, chains one or two 90° pivots
+  // (turnSequenceFor already returns two for a 180°) before driving.
+  function headTowardDirection(tabId, dir) {
+    if (dir === robotFacing) {
+      beginForwardDrive(tabId);
+      return;
+    }
 
+    if (isAtIntersection(robotX, robotY)) {
+      currentDriveDir = 'stop';
+      if (driveAnimFrame) { cancelAnimationFrame(driveAnimFrame); driveAnimFrame = null; lastFrameTime = null; }
+      driveRealMotor('stop');
+
+      turnInProgress = true;
+      runTurnSequence(tabId, turnSequenceFor(robotFacing, dir), () => {
+        turnInProgress = false;
+        beginForwardDrive(tabId);
+        // Anything clicked while the pivot(s) were still physically
+        // completing gets applied now instead of having interrupted them.
+        if (queuedMotorCommand) {
+          const { tabId: qTabId, dir: qDir } = queuedMotorCommand;
+          queuedMotorCommand = null;
+          setMotorDir(qTabId, qDir);
+        }
+      });
+      return;
+    }
+
+    // Not at an intersection yet — queue the turn, and make sure the bus is
+    // actually moving toward one (in whichever direction it's already
+    // facing) so the request eventually gets fulfilled.
+    pendingTurn = dir;
+    pendingTurnTabId = tabId;
+    if (currentDriveDir !== 'forward') {
+      activeDriveTabId = tabId;
+      departedIntersection = false;
+      currentDriveDir = 'forward';
+      driveRealMotor('forward');
+      if (!driveAnimFrame) { lastFrameTime = null; driveAnimFrame = requestAnimationFrame(driveAnimLoop); }
+    }
+    setDpadUi(tabId, robotFacing);
+    const statusEl = document.getElementById('motorStatus-' + tabId);
+    const subEl = document.getElementById('motorSubstatus-' + tabId);
+    if (statusEl) {
+      statusEl.textContent = `${MOTOR_LABELS[robotFacing].status} — will turn to face ${dir} at the next crossroad`;
+      statusEl.classList.add('moving');
+    }
+    if (subEl) subEl.textContent = 'Continuing until then';
+    draw();
+  }
+
+  // Runs a chain of 90° pivots (one for a quarter-turn, two for a 180°),
+  // one after another, then calls onDone once the bus faces its new direction.
+  function runTurnSequence(tabId, turns, onDone) {
+    if (turns.length === 0) { onDone(); return; }
+    const [next, ...rest] = turns;
+    performSingleTurn(tabId, next, () => runTurnSequence(tabId, rest, onDone));
+  }
+
+  // Executes one physical 90° pivot — only succeeds at an intersection,
+  // where the bus already is by the time this is ever called.
+  function performSingleTurn(tabId, pivotDir, onDone) {
     const statusEl = document.getElementById('motorStatus-' + tabId);
     const subEl = document.getElementById('motorSubstatus-' + tabId);
 
-    const turned = attemptTurn(dir);
+    const turned = attemptTurn(pivotDir);
     if (turned) {
       // Recorded only now, after attemptTurn() has snapped robotX/robotY
       // exactly onto the intersection — pushing beforehand recorded
@@ -2938,30 +2965,37 @@
       // which drew a diagonal jog in the blue trail instead of a clean
       // corner exactly at the intersection.
       routeTrail.push({ x: robotX, y: robotY });
-      driveRealTurn(dir);
-      turnInProgress = true;
-      setDpadUi(tabId, dir);
-      if (statusEl) { statusEl.textContent = MOTOR_LABELS[dir].status; statusEl.classList.add('moving'); }
-      if (subEl) subEl.textContent = MOTOR_LABELS[dir].sub;
-      setTimeout(() => {
-        turnInProgress = false;
-        setDpadUi(tabId, 'stop');
-        if (statusEl) { statusEl.textContent = MOTOR_LABELS.stop.status; statusEl.classList.remove('moving'); }
-        if (subEl) subEl.textContent = MOTOR_LABELS.stop.sub;
-        // Anything the user clicked while this pivot was still physically
-        // completing gets applied now instead of having interrupted it.
-        if (queuedMotorCommand) {
-          const { tabId: qTabId, dir: qDir } = queuedMotorCommand;
-          queuedMotorCommand = null;
-          setMotorDir(qTabId, qDir);
-        }
-      }, TURN_SAFETY_TIMEOUT_MS);
+      driveRealTurn(pivotDir);
+      setDpadUi(tabId, pivotDir);
+      if (statusEl) { statusEl.textContent = TURN_LABELS[pivotDir].status; statusEl.classList.add('moving'); }
+      if (subEl) subEl.textContent = TURN_LABELS[pivotDir].sub;
+      draw();
+      setTimeout(onDone, TURN_SAFETY_TIMEOUT_MS);
     } else {
       // Shouldn't normally happen (caller already checked), but guard anyway.
       setDpadUi(tabId, 'stop');
       if (statusEl) { statusEl.textContent = 'Can\'t turn here'; statusEl.classList.remove('moving'); }
       if (subEl) subEl.textContent = 'Only allowed at an intersection.';
+      draw();
+      onDone();
     }
+  }
+
+  // Starts (or continues) driving forward in whichever direction the bus is
+  // now facing — always ends up moving exactly one road segment, since
+  // driveAnimLoop already auto-stops at the very next intersection.
+  function beginForwardDrive(tabId) {
+    activeDriveTabId = tabId;
+    departedIntersection = false;
+    currentDriveDir = 'forward';
+    setDpadUi(tabId, robotFacing);
+    const statusEl = document.getElementById('motorStatus-' + tabId);
+    const subEl = document.getElementById('motorSubstatus-' + tabId);
+    const info = MOTOR_LABELS[robotFacing];
+    if (statusEl) { statusEl.textContent = info.status; statusEl.classList.add('moving'); }
+    if (subEl) subEl.textContent = info.sub;
+    driveRealMotor('forward');
+    if (!driveAnimFrame) { lastFrameTime = null; driveAnimFrame = requestAnimationFrame(driveAnimLoop); }
     draw();
   }
 
@@ -2985,6 +3019,8 @@
     draw();
   }
 
+  // dir is 'up' | 'down' | 'left' | 'right' | 'stop' — always an absolute
+  // map direction now, so every arrow button matches the map exactly.
   function setMotorDir(tabId, dir) {
     if (turnInProgress) {
       // A physical pivot is still completing — every path below eventually
@@ -3000,65 +3036,22 @@
     }
     motorState[tabId] = dir;
 
-    const statusEl = document.getElementById('motorStatus-' + tabId);
-    const subEl = document.getElementById('motorSubstatus-' + tabId);
-
-    if (dir === 'left' || dir === 'right') {
-      if (isAtIntersection(robotX, robotY)) {
-        // Already at an intersection — turn right now.
-        pendingTurn = null;
-        performTurn(tabId, dir);
-      } else {
-        // Not there yet — queue the turn. If already driving, keep driving;
-        // the loop fires the turn automatically once it reaches an intersection.
-        pendingTurn = dir;
-        pendingTurnTabId = tabId;
-        setDpadUi(tabId, currentDriveDir);
-        const baseLabel = currentDriveDir === 'stop' ? 'Stopped' : MOTOR_LABELS[currentDriveDir].status;
-        if (statusEl) {
-          statusEl.textContent = `${baseLabel} — will turn ${dir} at next intersection`;
-          statusEl.classList.toggle('moving', currentDriveDir !== 'stop');
-        }
-        if (subEl) {
-          subEl.textContent = currentDriveDir !== 'stop'
-            ? 'Continuing until then'
-            : 'Press Forward or Backward to reach one';
-        }
-        draw();
-      }
+    if (dir === 'stop') {
+      pendingTurn = null; // an explicit stop cancels any queued turn
+      currentDriveDir = 'stop';
+      if (driveAnimFrame) { cancelAnimationFrame(driveAnimFrame); driveAnimFrame = null; lastFrameTime = null; }
+      driveRealMotor('stop');
+      setDpadUi(tabId, 'stop');
+      const statusEl = document.getElementById('motorStatus-' + tabId);
+      const subEl = document.getElementById('motorSubstatus-' + tabId);
+      if (statusEl) { statusEl.textContent = MOTOR_LABELS.stop.status; statusEl.classList.remove('moving'); }
+      if (subEl) subEl.textContent = MOTOR_LABELS.stop.sub;
+      draw(); // immediate redraw so the marker's color/state updates right away
       return;
     }
 
-    // forward / backward / stop — continuous driving along the current road
-    if (dir === 'stop') pendingTurn = null; // an explicit stop cancels any queued turn
-    if (dir === 'forward' || dir === 'backward') {
-      activeDriveTabId = tabId;
-      departedIntersection = false; // don't re-trigger a stop at the intersection we're starting from
-    }
-    // The user driving backward themselves is proof it's fine on this map,
-    // so autopilot is allowed to replay that instead of always detouring to
-    // an intersection to pivot 180°.
-    if (dir === 'backward') demoUsedBackward = true;
-
-    setDpadUi(tabId, dir);
-    const info = MOTOR_LABELS[dir];
-    if (statusEl) {
-      statusEl.textContent = info.status;
-      statusEl.classList.toggle('moving', dir !== 'stop');
-    }
-    if (subEl) subEl.textContent = info.sub;
-
-    driveRealMotor(dir);
-
-    currentDriveDir = dir;
-    if (dir !== 'stop') {
-      if (!driveAnimFrame) {
-        lastFrameTime = null;
-        driveAnimFrame = requestAnimationFrame(driveAnimLoop);
-      }
-    } else {
-      draw(); // immediate redraw so the marker's color/state updates right away
-    }
+    activeDriveTabId = tabId;
+    headTowardDirection(tabId, dir);
   }
 </script>
 
