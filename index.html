@@ -538,19 +538,19 @@
   </div>
 
   <div class="panel active" id="panel-supervised">
-    <span class="tag">Labeled Data</span>
+    <span class="tag">Data With Answers</span>
     <h2>Supervised Learning</h2>
-    <p>The model learns from labeled examples, mapping inputs to known outputs so it can predict labels for new, unseen data.</p>
+    <p>The computer learns from examples that already have the right answer attached. After studying enough examples, it can guess the answer for brand-new examples it has never seen before.</p>
     <ul>
-      <li>Requires labeled training data</li>
-      <li>Common tasks: classification, regression</li>
-      <li>Examples: spam detection, price prediction, image recognition</li>
-      <li>Algorithms: Linear Regression, Decision Trees, SVM, Neural Networks</li>
+      <li>Needs examples that already have the correct answer</li>
+      <li>Good for: sorting things into groups, or predicting a number</li>
+      <li>Real-world uses: catching spam emails, guessing a house's price, recognizing what's in a photo</li>
+      <li>Some tools it uses: Linear Regression, Decision Trees, Neural Networks</li>
     </ul>
 
     <div class="trainer">
-      <h3>Try it: drive the bus, and let it learn your route</h3>
-      <p class="hint">Rename the store types if you like, pick one, and click along the streets to drop labeled store pins. Then drive the bus with the D-pad — every store it passes gets recorded, in order, as your demonstrated route. Once you've visited a few stops, train the model: it learns a rule connecting store type + location to visit order, so it can suggest a route for <em>any</em> set of stops, including ones you never drove to yourself.</p>
+      <h3>Try it yourself: drive the bus and teach it your route</h3>
+      <p class="hint">Rename the store types if you want, pick one, and click along the streets to add stores to the map. Then drive the bus with the arrow buttons — every store it drives past gets added to your route, in order. Once you've visited a few stores, click "Train Route Model." The computer studies your route and learns a pattern connecting store type + location to the order you visited them. Then it can guess a route for <em>any</em> set of stores — even ones you never drove to yourself!</p>
 
       <div class="label-names" id="labelNames"></div>
 
@@ -569,28 +569,28 @@
         </div>
 
         <div class="motor-column">
-          <h3>LEGO Motor Control</h3>
-          <p class="hint">Drive the bus with the D-pad — forward, backward, and turns. Runs as a visual simulation by default; click "Connect Real Motor" to pair over Bluetooth (Chrome/Edge, needs https:// or localhost).</p>
+          <h3>Motor Controls</h3>
+          <p class="hint">Use the arrow buttons to drive the bus forward, backward, and to turn. This works as a computer animation by default. If you have a real LEGO motor, click "Connect Real Motor" to control it too (works in Chrome or Edge).</p>
           <div class="motor-widget">
             <div class="dpad">
-              <button class="fwd" data-dir="forward" onclick="setMotorDir('supervised','forward')" title="Forward — drives in the direction the bus is currently facing">▲</button>
-              <button class="left" data-dir="left" onclick="setMotorDir('supervised','left')" title="Left — turns the bus left relative to its current facing">◀</button>
+              <button class="fwd" data-dir="forward" onclick="setMotorDir('supervised','forward')" title="Forward — drives the way the bus is already pointing">▲</button>
+              <button class="left" data-dir="left" onclick="setMotorDir('supervised','left')" title="Left — turns the bus 90° to its left">◀</button>
               <button class="stop" data-dir="stop" onclick="setMotorDir('supervised','stop')" title="Stop">■</button>
-              <button class="right" data-dir="right" onclick="setMotorDir('supervised','right')" title="Right — turns the bus right relative to its current facing">▶</button>
-              <button class="back" data-dir="backward" onclick="setMotorDir('supervised','backward')" title="Backward — drives opposite the direction the bus is currently facing">▼</button>
+              <button class="right" data-dir="right" onclick="setMotorDir('supervised','right')" title="Right — turns the bus 90° to its right">▶</button>
+              <button class="back" data-dir="backward" onclick="setMotorDir('supervised','backward')" title="Backward — drives the opposite way the bus is pointing">▼</button>
             </div>
             <div class="motor-readout">
               <div class="motor-status" id="motorStatus-supervised">Stopped</div>
-              <div class="motor-substatus" id="motorSubstatus-supervised">Double motor idle</div>
+              <div class="motor-substatus" id="motorSubstatus-supervised">Motors resting</div>
             </div>
           </div>
-          <p class="hint dpad-legend">▲ Forward / ▼ Backward (drive along whichever way the bus is currently facing) (opposite for backward) — they're not fixed compass directions. ◀ Left / ▶ Right (turn 90° relative to that facing.)</p>
+          <p class="hint dpad-legend">▲ Forward and ▼ Backward (moves the bus the way it's already pointing.) ◀ Left and ▶ Right (turns the bus 90° relative to current facing.)</p>
           <div class="ble-row">
             <button class="ble-connect-btn" id="bleConnectBtn-supervised" onclick="connectMotorBluetooth()">🔵 Connect Real Motor</button>
-            <span class="ble-status-text" id="bleStatusText-supervised">Not connected — driving the visual simulation only</span>
+            <span class="ble-status-text" id="bleStatusText-supervised">Not connected — just showing the computer animation</span>
             <div class="ble-uuid-row">
               <div class="ble-uuid-field">
-                <label for="turnDegreesInput-supervised">Turn calibration — degrees each wheel turns for a 90° pivot (raise if turns fall short, lower if they overshoot)</label>
+                <label for="turnDegreesInput-supervised">Turn Adjustment — how far each wheel spins for a 90° turn (turn this up if turns are too small, down if too big)</label>
                 <input type="number" id="turnDegreesInput-supervised" min="1" max="1000" step="1" value="155" oninput="setTurnDegrees(this.value)">
               </div>
             </div>
@@ -599,40 +599,40 @@
       </div>
 
       <div class="route-log-wrap">
-        <div class="route-log-label">🚌 Route so far (drive the bus below to build this):</div>
-        <div id="routeLog" class="route-log">No stops visited yet — drive the bus to a store pin.</div>
+        <div class="route-log-label">🚌 Your route so far (drive the bus below to build it):</div>
+        <div id="routeLog" class="route-log">No stores visited yet — drive the bus to a store to add it.</div>
         <button id="clearRouteBtn" onclick="clearRoute()" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;margin-top:8px;">Clear Route</button>
       </div>
 
       <div class="status-row">
-        <span id="routeModelStatus">Not trained</span>
+        <span id="routeModelStatus">Not trained yet</span>
       </div>
 
       <div id="predictResult"></div>
 
       <div class="trainer-controls">
-        <button id="trainBtn" onclick="trainRouteModel()" disabled>Train Route Model</button>
+        <button id="trainBtn" onclick="trainRouteModel()" disabled>Train the Model</button>
         <button id="predictRouteBtn" onclick="predictRoute()" disabled>Predict Route</button>
-        <button id="undoBtn" onclick="undoPoint()">Undo Pin</button>
-        <button id="clearBtn" onclick="clearPoints()">Clear All Pins</button>
+        <button id="undoBtn" onclick="undoPoint()">Undo Last Store</button>
+        <button id="clearBtn" onclick="clearPoints()">Clear All Stores</button>
       </div>
     </div>
   </div>
 
   <div class="panel unsupervised" id="panel-unsupervised">
-    <span class="tag">Unlabeled Data</span>
+    <span class="tag">Data Without Answers</span>
     <h2>Unsupervised Learning</h2>
-    <p>The model works with unlabeled data, finding hidden patterns or groupings on its own without predefined answers.</p>
+    <p>The computer looks at data that has no answers attached at all. It finds patterns and groups things together all by itself, without anyone telling it what to look for.</p>
     <ul>
-      <li>No labeled training data required</li>
-      <li>Common tasks: clustering, dimensionality reduction</li>
-      <li>Examples: customer segmentation, anomaly detection, topic modeling</li>
-      <li>Algorithms: K-Means, Hierarchical Clustering, PCA, Autoencoders</li>
+      <li>Doesn't need examples with answers already given</li>
+      <li>Good for: grouping similar things together, simplifying messy data</li>
+      <li>Real-world uses: grouping shoppers with similar habits, spotting something unusual, sorting news articles by topic</li>
+      <li>Some tools it uses: K-Means, Hierarchical Clustering, PCA</li>
     </ul>
 
     <div class="trainer">
-      <h3>Try it: let the model find its own route</h3>
-      <p class="hint">Rename the store types if you like, pick one, and click along the streets to drop labeled store pins — just like the Supervised tab. The difference is what happens next: instead of driving a demonstration route to train a model on, K-Means clustering groups the stores by type <em>and</em> location alone, with no route ever demonstrated, and the bus autopilots a path that visits each cluster in turn.</p>
+      <h3>Try it yourself: let the computer find its own route</h3>
+      <p class="hint">Just like before, you can rename the store types, pick one, and click along the streets to add stores to the map. But this time you won't drive a route to teach the computer anything. Instead, click "Predict Route," and the computer will group the stores by how close together they are (and a little bit by their type) — all on its own, with no example route needed. Then the bus will automatically drive to visit every group.</p>
 
       <div class="label-names" id="uLabelNames"></div>
 
@@ -651,20 +651,20 @@
         </div>
 
         <div class="motor-column">
-          <h3>LEGO Motor Status</h3>
-          <p class="hint">There's no manual driving here — this bus only moves in autopilot mode, following the model's predicted route below. Connect a real motor to have it drive in sync (Chrome/Edge, needs https:// or localhost).</p>
+          <h3>Motor Status</h3>
+          <p class="hint">You can't drive this bus yourself — it only moves on its own, following the route the computer figures out below. If you have a real LEGO motor, click "Connect Real Motor" to have it move along with the bus on screen (works in Chrome or Edge).</p>
           <div class="motor-widget">
             <div class="motor-readout">
               <div class="motor-status" id="motorStatus-unsupervised">Stopped</div>
-              <div class="motor-substatus" id="motorSubstatus-unsupervised">Double motor idle</div>
+              <div class="motor-substatus" id="motorSubstatus-unsupervised">Motors resting</div>
             </div>
           </div>
           <div class="ble-row">
             <button class="ble-connect-btn" id="bleConnectBtn-unsupervised" onclick="connectMotorBluetooth()">🔵 Connect Real Motor</button>
-            <span class="ble-status-text" id="bleStatusText-unsupervised">Not connected — driving the visual simulation only</span>
+            <span class="ble-status-text" id="bleStatusText-unsupervised">Not connected — just showing the computer animation</span>
             <div class="ble-uuid-row">
               <div class="ble-uuid-field">
-                <label for="turnDegreesInput-unsupervised">Turn calibration — degrees each wheel turns for a 90° pivot (raise if turns fall short, lower if they overshoot)</label>
+                <label for="turnDegreesInput-unsupervised">Turn Adjustment — how far each wheel spins for a 90° turn (turn this up if turns are too small, down if too big)</label>
                 <input type="number" id="turnDegreesInput-unsupervised" min="1" max="1000" step="1" value="155" oninput="setTurnDegrees(this.value)">
               </div>
             </div>
@@ -676,8 +676,8 @@
 
       <div class="trainer-controls">
         <button id="uPredictRouteBtn" onclick="uPredictRoute()" disabled>Predict Route</button>
-        <button id="uUndoBtn" onclick="uUndoPoint()">Undo Pin</button>
-        <button id="uClearBtn" onclick="uClearPoints()">Clear All Pins</button>
+        <button id="uUndoBtn" onclick="uUndoPoint()">Undo Last Store</button>
+        <button id="uClearBtn" onclick="uClearPoints()">Clear All Stores</button>
       </div>
     </div>
   </div>
@@ -1167,7 +1167,7 @@
   function disableRouteModelUi() {
     routeModel = null;
     const status = document.getElementById('routeModelStatus');
-    if (status) { status.textContent = 'Not trained'; status.classList.remove('trained'); }
+    if (status) { status.textContent = 'Not trained yet'; status.classList.remove('trained'); }
     const predictBtn = document.getElementById('predictRouteBtn');
     if (predictBtn) predictBtn.disabled = true;
     const resultEl = document.getElementById('predictResult');
@@ -1197,7 +1197,7 @@
     const el = document.getElementById('routeLog');
     if (!el) return;
     if (visitedRoute.length === 0) {
-      el.textContent = 'No stops visited yet — drive the bus to a store pin.';
+      el.textContent = 'No stores visited yet — drive the bus to a store to add it.';
       return;
     }
     const currentNames = classNames();
@@ -2223,7 +2223,7 @@
     const currentNames = uClassNames();
     const resultEl = document.getElementById('uPredictResult');
     if (resultEl) {
-      resultEl.innerHTML = `Found ${clusters.length} cluster${clusters.length === 1 ? '' : 's'} — predicted route: ` +
+      resultEl.innerHTML = `Found ${clusters.length} group${clusters.length === 1 ? '' : 's'} of stores — predicted route: ` +
         orderedStops.map((p, i) => `<span class="predicted-label" style="color:${CLASS_COLORS[p.label]}">${i + 1}. ${currentNames[p.label] || 'Store'}</span>`).join(' <span style="color:var(--muted)">→</span> ');
     }
 
@@ -2636,7 +2636,7 @@
     backward: { status: 'Driving backward', sub: 'Reversing along the road' },
     left:     { status: 'Turning left',     sub: '90° pivot at the intersection' },
     right:    { status: 'Turning right',    sub: '90° pivot at the intersection' },
-    stop:     { status: 'Stopped',          sub: 'Double motor idle' }
+    stop:     { status: 'Stopped',          sub: 'Motors resting' }
   };
 
   // LEGO Education BLE protocol (confirmed against a working implementation)
