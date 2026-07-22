@@ -708,6 +708,11 @@
   let visitedRoute = [];  // ordered array of point objects, recorded as the bus drives past them
   let predictedOrder = []; // ordered array of point objects, from the model's most recent route prediction
   let routeModel = null;   // { W: [...], b, numClasses } — trained on visitedRoute
+  // True once the user has manually driven the bus backward anywhere in
+  // their demonstrated route — if they showed backing up is fine, autopilot
+  // is allowed to back up too, instead of always detouring to an
+  // intersection to pivot 180°.
+  let demoUsedBackward = false;
 
   // Live motor position on the map, constrained to the road network: the
   // motor always sits exactly on a road, facing one of 4 cardinal
@@ -1120,6 +1125,7 @@
     points = [];
     visitedRoute = [];
     predictedOrder = [];
+    demoUsedBackward = false;
     currentlyNearStops = new Set();
     renderRouteLog();
     disableRouteModelUi();
@@ -1131,6 +1137,7 @@
     if (autopilotActive) { stopAutopilot(); driveRealMotor('stop'); }
     visitedRoute = [];
     predictedOrder = [];
+    demoUsedBackward = false;
     currentlyNearStops = new Set();
     renderRouteLog();
     disableRouteModelUi();
@@ -1356,9 +1363,8 @@
   // run — gold order badges only appear for stops up to this count, so they
   // reveal one at a time as the bus reaches them instead of all at once.
   let autopilotStopsReached = 0;
-  // 'forward' or 'backward' — a target directly behind the bus is reached by
-  // backing up along the same road, not by physically turning around (a
-  // 180° pivot needs an intersection, which a mid-road stop often isn't).
+  // 'forward' or 'backward' — only ever 'backward' for a leg where the next
+  // stop is directly behind the bus AND the user's own demo backed up too.
   let autopilotDriveDir = 'forward';
 
   function facingNeededFor(from, to) {
@@ -1439,6 +1445,7 @@
     resetRobotPositionOnly();
     autopilotTrail = [{ x: robotX, y: robotY }];
     autopilotStopsReached = 0;
+    autopilotDriveDir = 'forward';
 
     const built = buildAutopilotRoute();
     autopilotWaypoints = built.waypoints;
@@ -1485,16 +1492,37 @@
       finishAutopilotRoute();
       return;
     }
-    const target = autopilotWaypoints[autopilotIndex];
-    const needed = facingNeededFor({ x: robotX, y: robotY }, target);
 
-    // A target exactly behind the bus (180° from its current facing) is
-    // reached by backing up — no turn, and no need to be at an intersection.
+    let target = autopilotWaypoints[autopilotIndex];
+    let needed = facingNeededFor({ x: robotX, y: robotY }, target);
     const idxC = FACING_ORDER.indexOf(robotFacing);
-    const idxN = FACING_ORDER.indexOf(needed);
-    const isBehind = ((idxN - idxC + 4) % 4) === 2;
-    const turns = isBehind ? [] : turnSequenceFor(robotFacing, needed);
-    const driveDir = isBehind ? 'backward' : 'forward';
+    let isBehind = ((FACING_ORDER.indexOf(needed) - idxC + 4) % 4) === 2;
+
+    let turns;
+    let driveDir = 'forward';
+
+    if (isBehind && demoUsedBackward) {
+      // The user's own demonstration backed up somewhere too, so this leg
+      // is allowed to as well — no turn needed, and no need to be at an
+      // intersection.
+      turns = [];
+      driveDir = 'backward';
+    } else {
+      // Otherwise a target directly behind the bus needs a 180° pivot,
+      // which only works at an intersection. If it isn't at one right now,
+      // detour to the nearest intersection ahead first — arriving there
+      // re-enters this same check, which will then find it CAN turn, since
+      // that detour point is always an intersection.
+      if (isBehind && !isAtIntersection(robotX, robotY)) {
+        const detour = nearestIntersectionAhead(robotX, robotY, robotFacing);
+        autopilotWaypoints.splice(autopilotIndex, 0, detour);
+        autopilotStopFlags.splice(autopilotIndex, 0, false);
+        target = autopilotWaypoints[autopilotIndex];
+        needed = facingNeededFor({ x: robotX, y: robotY }, target);
+        isBehind = ((FACING_ORDER.indexOf(needed) - idxC + 4) % 4) === 2;
+      }
+      turns = turnSequenceFor(robotFacing, needed);
+    }
 
     const startDriving = () => {
       if (!autopilotActive) return;
@@ -2938,6 +2966,10 @@
       activeDriveTabId = tabId;
       departedIntersection = false; // don't re-trigger a stop at the intersection we're starting from
     }
+    // The user driving backward themselves is proof it's fine on this map,
+    // so autopilot is allowed to replay that instead of always detouring to
+    // an intersection to pivot 180°.
+    if (dir === 'backward') demoUsedBackward = true;
 
     setDpadUi(tabId, dir);
     const info = MOTOR_LABELS[dir];
