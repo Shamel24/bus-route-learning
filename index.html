@@ -584,7 +584,7 @@
               <div class="motor-substatus" id="motorSubstatus-supervised">Double motor idle</div>
             </div>
           </div>
-          <p class="hint dpad-legend">▲ Forward / ▼ Backward drive along whichever way the bus is currently facing (opposite for backward) — they're not fixed compass directions. ◀ Left / ▶ Right turn 90° relative to that facing.</p>
+          <p class="hint dpad-legend">▲ Forward / ▼ Backward (drive along whichever way the bus is currently facing) (opposite for backward) — they're not fixed compass directions. ◀ Left / ▶ Right (turn 90° relative to that facing.)</p>
           <div class="ble-row">
             <button class="ble-connect-btn" id="bleConnectBtn-supervised" onclick="connectMotorBluetooth()">🔵 Connect Real Motor</button>
             <span class="ble-status-text" id="bleStatusText-supervised">Not connected — driving the visual simulation only</span>
@@ -2809,9 +2809,11 @@
   // of "both wheels agreeing," so this is the one place the correction lives.
   const MOTOR_2_INVERT = -1;
 
+  // Both motors' stop commands go out in one write — previously two
+  // separately-queued writes meant one motor could stop up to
+  // WRITE_PACING_MS before the other, ending in an asymmetric jerk.
   function stopRealMotor() {
-    sendBytes(motorStopMsg(1));
-    sendBytes(motorStopMsg(2));
+    sendBytes(concatBytes([motorStopMsg(1), motorStopMsg(2)]));
   }
 
   // Drives continuously in a direction using the motor's native "run until
@@ -2824,11 +2826,18 @@
     const POWER = { forward: [50, 50], backward: [-50, -50] }[dir];
     if (!POWER) return;
     const speeds = [POWER[0], POWER[1] * MOTOR_2_INVERT];
+    const frames = [];
     for (const [mask, signedSpeed] of [[1, speeds[0]], [2, speeds[1]]]) {
       const magnitude = Math.abs(signedSpeed);
       const direction = signedSpeed >= 0 ? DIRECTION_CLOCKWISE : DIRECTION_COUNTERCLOCKWISE;
-      sendBytes(concatBytes([motorSetSpeed(mask, magnitude), motorRun(mask, direction)]));
+      frames.push(motorSetSpeed(mask, magnitude), motorRun(mask, direction));
     }
+    // Both motors' commands travel in a single BLE write instead of two
+    // separately-queued ones (each write is paced WRITE_PACING_MS apart) —
+    // previously that gap meant one wheel started spinning before the
+    // other, causing the bus to drift toward one side until the second
+    // motor caught up.
+    sendBytes(concatBytes(frames));
   }
 
   // A 90° pivot at an intersection, now using the motor's native
@@ -2848,11 +2857,15 @@
     // translated into this command's magnitude + direction-enum format.
     const POWER = turnDir === 'left' ? [50, -50] : [-50, 50];
     const speeds = [POWER[0], POWER[1] * MOTOR_2_INVERT];
+    const frames = [];
     for (const [mask, signedSpeed] of [[1, speeds[0]], [2, speeds[1]]]) {
       const magnitude = Math.abs(signedSpeed);
       const direction = signedSpeed >= 0 ? DIRECTION_CLOCKWISE : DIRECTION_COUNTERCLOCKWISE;
-      sendBytes(concatBytes([motorSetSpeed(mask, magnitude), motorRunForDegrees(mask, TURN_DEGREES, direction)]));
+      frames.push(motorSetSpeed(mask, magnitude), motorRunForDegrees(mask, TURN_DEGREES, direction));
     }
+    // Same single-write fix as driveRealMotor() — both motors start their
+    // pivot from the same BLE write instead of two staggered ones.
+    sendBytes(concatBytes(frames));
     setTimeout(stopRealMotor, TURN_SAFETY_TIMEOUT_MS);
   }
 
