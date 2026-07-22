@@ -588,6 +588,12 @@
           <div class="ble-row">
             <button class="ble-connect-btn" id="bleConnectBtn-supervised" onclick="connectMotorBluetooth()">🔵 Connect Real Motor</button>
             <span class="ble-status-text" id="bleStatusText-supervised">Not connected — driving the visual simulation only</span>
+            <div class="ble-uuid-row">
+              <div class="ble-uuid-field">
+                <label for="turnDegreesInput-supervised">Turn calibration — degrees each wheel turns for a 90° pivot (raise if turns fall short, lower if they overshoot)</label>
+                <input type="number" id="turnDegreesInput-supervised" min="1" max="1000" step="1" value="155" oninput="setTurnDegrees(this.value)">
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -656,6 +662,12 @@
           <div class="ble-row">
             <button class="ble-connect-btn" id="bleConnectBtn-unsupervised" onclick="connectMotorBluetooth()">🔵 Connect Real Motor</button>
             <span class="ble-status-text" id="bleStatusText-unsupervised">Not connected — driving the visual simulation only</span>
+            <div class="ble-uuid-row">
+              <div class="ble-uuid-field">
+                <label for="turnDegreesInput-unsupervised">Turn calibration — degrees each wheel turns for a 90° pivot (raise if turns fall short, lower if they overshoot)</label>
+                <input type="number" id="turnDegreesInput-unsupervised" min="1" max="1000" step="1" value="155" oninput="setTurnDegrees(this.value)">
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -2119,10 +2131,17 @@
   // normalized location as its features — but unlike the supervised model,
   // nothing here is trained on a demonstrated route: the clusters are found
   // by the data's own structure alone, and the route just visits them.
+  // Location is the primary factor in that clustering: it's weighted at
+  // full strength, while type is scaled down (TYPE_FEATURE_WEIGHT) so it
+  // only acts as a secondary, tie-breaking influence — two stores near each
+  // other still end up in the same cluster even if their types differ, but
+  // among stores that are similarly positioned, matching types cluster
+  // together first.
+  const TYPE_FEATURE_WEIGHT = 0.35;
   function uBuildClusterFeatures(p) {
     const numClasses = uNames.length;
     const oneHot = Array(numClasses).fill(0);
-    oneHot[p.label] = 1;
+    oneHot[p.label] = TYPE_FEATURE_WEIGHT;
     const [nx, ny] = normalize(p.x, p.y);
     return [...oneHot, nx, ny];
   }
@@ -2850,12 +2869,25 @@
   // A 90° pivot at an intersection, now using the motor's native
   // Run-For-Degrees command instead of a timeout guess — it rotates a
   // precise number of degrees and stops on its own. TURN_DEGREES is how
-  // far each wheel turns, not the robot's own turn angle, so it's still a
-  // value to calibrate: raise it if the pivot under-shoots 90°, lower it
-  // if it over-shoots. A short safety timeout backs it up in case the
-  // motor doesn't report completion.
-  const TURN_DEGREES = 160;
+  // far each wheel turns, not the robot's own turn angle — it depends on
+  // wheel size/gearing, so it's user-adjustable (see the calibration field
+  // next to "Connect Real Motor") rather than a fixed constant. Raise it if
+  // the pivot under-shoots 90°, lower it if it over-shoots. A short safety
+  // timeout backs it up in case the motor doesn't report completion.
+  let TURN_DEGREES = 155;
   const TURN_SAFETY_TIMEOUT_MS = 800;
+
+  // Keeps both tabs' calibration fields in sync with the one shared value
+  // (there's only one physical motor, so only one calibration matters).
+  function setTurnDegrees(value) {
+    const n = Math.round(Number(value));
+    if (!Number.isFinite(n) || n <= 0) return;
+    TURN_DEGREES = n;
+    ['supervised', 'unsupervised'].forEach(tabId => {
+      const el = document.getElementById('turnDegreesInput-' + tabId);
+      if (el && Number(el.value) !== n) el.value = n;
+    });
+  }
 
   function driveRealTurn(turnDir) {
     if (!writeChar) return;
