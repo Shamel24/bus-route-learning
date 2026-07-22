@@ -727,6 +727,13 @@
   let pendingTurn = null; // 'left' | 'right' | null — queued to fire once the next intersection is reached
   let pendingTurnTabId = 'supervised'; // which tab's UI to update when the queued turn actually fires
   let activeDriveTabId = 'supervised'; // which tab's UI to update when auto-stopping at an intersection
+  // True from the moment a real 90° pivot is issued until it's presumed
+  // physically complete — any D-pad input during this window is queued
+  // instead of dispatched immediately, since driveRealMotor('stop') (sent
+  // at the top of every setMotorDir/performTurn call) would otherwise cut
+  // the in-progress pivot short.
+  let turnInProgress = false;
+  let queuedMotorCommand = null; // { tabId, dir } — the latest input received while turnInProgress was true
   let departedIntersection = true; // false right after starting a drive, until clear of the starting intersection
   // The bus's actual driven path — a fixed waypoint is added every time it
   // stops or turns (a "corner"), and the live current position extends the
@@ -2900,13 +2907,22 @@
       // corner exactly at the intersection.
       routeTrail.push({ x: robotX, y: robotY });
       driveRealTurn(dir);
+      turnInProgress = true;
       setDpadUi(tabId, dir);
       if (statusEl) { statusEl.textContent = MOTOR_LABELS[dir].status; statusEl.classList.add('moving'); }
       if (subEl) subEl.textContent = MOTOR_LABELS[dir].sub;
       setTimeout(() => {
+        turnInProgress = false;
         setDpadUi(tabId, 'stop');
         if (statusEl) { statusEl.textContent = MOTOR_LABELS.stop.status; statusEl.classList.remove('moving'); }
         if (subEl) subEl.textContent = MOTOR_LABELS.stop.sub;
+        // Anything the user clicked while this pivot was still physically
+        // completing gets applied now instead of having interrupted it.
+        if (queuedMotorCommand) {
+          const { tabId: qTabId, dir: qDir } = queuedMotorCommand;
+          queuedMotorCommand = null;
+          setMotorDir(qTabId, qDir);
+        }
       }, TURN_SAFETY_TIMEOUT_MS);
     } else {
       // Shouldn't normally happen (caller already checked), but guard anyway.
@@ -2938,6 +2954,14 @@
   }
 
   function setMotorDir(tabId, dir) {
+    if (turnInProgress) {
+      // A physical pivot is still completing — every path below eventually
+      // sends a motor command, which would cut it short. Queue this input
+      // (only the latest one matters) to apply the instant it finishes.
+      queuedMotorCommand = { tabId, dir };
+      return;
+    }
+
     if (autopilotActive) {
       stopAutopilot();
       driveRealMotor('stop');
