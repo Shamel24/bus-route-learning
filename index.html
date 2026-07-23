@@ -294,7 +294,7 @@
 
   #mapCanvas {
     width: 100%;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 480 / 380;
     display: block;
     background: #0b0d13;
     border: 1px solid var(--border);
@@ -567,7 +567,7 @@
 
   #mapCanvasUnsup {
     width: 100%;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 480 / 380;
     display: block;
     background: #0b0d13;
     border: 1px solid var(--border);
@@ -615,7 +615,7 @@
       <div class="map-motor-row">
         <div class="map-column">
           <div id="canvas-wrap">
-            <canvas id="mapCanvas" width="480" height="360"></canvas>
+            <canvas id="mapCanvas" width="480" height="380"></canvas>
           </div>
 
           <div class="status-row">
@@ -697,7 +697,7 @@
       <div class="map-motor-row">
         <div class="map-column">
           <div id="canvas-wrap-unsup">
-            <canvas id="mapCanvasUnsup" width="480" height="360"></canvas>
+            <canvas id="mapCanvasUnsup" width="480" height="380"></canvas>
           </div>
 
           <div class="status-row">
@@ -776,7 +776,12 @@
 
   // Fixed road network — a handful of horizontal/vertical "streets" the
   // motor is constrained to drive along.
-  const ROADS_H = [0.04, 0.18, 0.42, 0.63, 0.86, 0.96].map(f => f * CH);
+  // The top fraction is bigger than the others (0.07 vs. the bottom
+  // margin's 0.04) to leave enough headroom for the visit-order/predicted-
+  // order badges, which are drawn up to 21px above a pin (13px offset +
+  // 8px radius) — without it, a store placed on the very top road would
+  // have its badge clipped off the top of the canvas.
+  const ROADS_H = [0.07, 0.18, 0.42, 0.63, 0.86, 0.96].map(f => f * CH);
   const ROADS_V = [0.04, 0.15, 0.38, 0.6, 0.82, 0.96].map(f => f * CW);
   const INTERSECTION_TOLERANCE = 14; // px — how close counts as "at" an intersection
 
