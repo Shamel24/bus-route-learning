@@ -956,6 +956,52 @@
     ctxTarget.restore();
   }
 
+  // Draws a small top-down bus icon at the origin, facing "up" (the caller
+  // rotates the canvas beforehand to point it the right way). Unlike a
+  // side-view emoji, a top-down shape has no "roof vs. wheels" — it only
+  // has a front and back — so rotating it to match the bus's facing never
+  // looks upside-down, just correctly turned to face that direction.
+  // Shared by both tabs' canvases (pass ctx or ctxU).
+  function drawBusIcon(ctxTarget, connected) {
+    const w = 13, h = 20, r = 3.5;
+    const x0 = -w / 2, y0 = -h / 2, x1 = w / 2, y1 = h / 2;
+
+    ctxTarget.beginPath();
+    ctxTarget.moveTo(x0 + r, y0);
+    ctxTarget.lineTo(x1 - r, y0);
+    ctxTarget.arcTo(x1, y0, x1, y0 + r, r);
+    ctxTarget.lineTo(x1, y1 - r);
+    ctxTarget.arcTo(x1, y1, x1 - r, y1, r);
+    ctxTarget.lineTo(x0 + r, y1);
+    ctxTarget.arcTo(x0, y1, x0, y1 - r, r);
+    ctxTarget.lineTo(x0, y0 + r);
+    ctxTarget.arcTo(x0, y0, x0 + r, y0, r);
+    ctxTarget.closePath();
+
+    // White body (green while a real motor is connected, same as before) —
+    // an MBTA bus's roof reads as white/silver with a black window band and
+    // a purple accent stripe, rather than the plain blue used previously.
+    ctxTarget.fillStyle = connected ? '#4ade80' : '#f2f2f2';
+    ctxTarget.fill();
+    ctxTarget.strokeStyle = '#0b0d13';
+    ctxTarget.lineWidth = 1.5;
+    ctxTarget.stroke();
+
+    // Windshield — a dark stripe right at the front — is what actually
+    // shows which way the bus is pointing.
+    ctxTarget.fillStyle = '#0b0d13';
+    ctxTarget.fillRect(x0 + 2, y0 + 2.5, w - 4, 2.5);
+
+    // MBTA-style purple accent stripe just behind the windshield.
+    ctxTarget.fillStyle = '#a78bfa';
+    ctxTarget.fillRect(x0 + 2, y0 + 5.5, w - 4, 1.5);
+
+    // Side windows, purely decorative.
+    ctxTarget.fillStyle = 'rgba(11, 13, 19, 0.55)';
+    ctxTarget.fillRect(x0 + 2, y0 + 8, w - 4, 2.5);
+    ctxTarget.fillRect(x0 + 2, y0 + 13, w - 4, 2.5);
+  }
+
   // Draws the bus's actual driven path: the fixed corner waypoints, plus a
   // live segment extending to the current position while it's moving —
   // this is what makes the line grow continuously behind the bus as it drives.
@@ -1856,15 +1902,10 @@
       ctx.restore();
     }
 
-    // Drawn upright regardless of facing — an emoji glyph reads as
-    // "upside-down bus" when rotated 180°, unlike the old plain triangle,
-    // so it stays fixed instead of rotating with FACING_ANGLE.
     ctx.save();
     ctx.translate(robotX, robotY);
-    ctx.font = '22px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('🚌', 0, 1);
+    ctx.rotate(FACING_ANGLE[robotFacing]);
+    drawBusIcon(ctx, connected);
     ctx.restore();
   }
 
@@ -2200,23 +2241,62 @@
   }
 
   // ---- The AI model: K-Means clustering. Stores are labeled by type just
-  // like the supervised tab, and the clustering uses both type (one-hot) and
+  // like the supervised tab, and the clustering uses type (one-hot),
+  // a broader category guessed from that type's name (see below), and
   // normalized location as its features — but unlike the supervised model,
   // nothing here is trained on a demonstrated route: the clusters are found
   // by the data's own structure alone, and the route just visits them.
   // Location is the primary factor in that clustering: it's weighted at
-  // full strength, while type is scaled down (TYPE_FEATURE_WEIGHT) so it
-  // only acts as a secondary, tie-breaking influence — two stores near each
-  // other still end up in the same cluster even if their types differ, but
-  // among stores that are similarly positioned, matching types cluster
-  // together first.
+  // full strength, while type and category are scaled down (*_FEATURE_WEIGHT)
+  // so they only act as secondary, tie-breaking influences — two stores near
+  // each other still end up in the same cluster even if their types differ,
+  // but among stores that are similarly positioned, matching (or related)
+  // types cluster together first.
+
+  // A small hand-curated keyword → category table, since there's no real
+  // language understanding available client-side — this is what lets the
+  // model notice that a "Pizza Place" and a "Restaurant" (or a "Craft
+  // Store" and a "Gift Shop") are related kinds of stores, even though
+  // their exact type labels are different words.
+  const STORE_CATEGORIES = [
+    { name: 'food & dining', keywords: ['pizza', 'restaurant', 'diner', 'cafe', 'coffee', 'bakery', 'grocery', 'deli', 'sandwich', 'food', 'kitchen', 'bar', 'grill', 'eatery', 'bistro', 'sushi', 'taco', 'burger', 'donut', 'bagel', 'ice cream', 'dessert', 'pub', 'brewery'] },
+    { name: 'handmade & gifts', keywords: ['craft', 'gift', 'hobby', 'handmade', 'boutique', 'souvenir', 'yarn', 'fabric', 'scrapbook', 'stationery', 'quilt', 'artisan', 'card'] },
+    { name: 'books & media', keywords: ['book', 'library', 'comic', 'magazine', 'media', 'music', 'record', 'movie', 'film', 'video', 'game'] },
+    { name: 'home & hardware', keywords: ['hardware', 'tool', 'lumber', 'paint', 'garden', 'nursery', 'plumbing', 'electrical', 'furniture', 'appliance'] },
+    { name: 'clothing & fashion', keywords: ['clothing', 'apparel', 'shoe', 'fashion', 'jewelry', 'accessory', 'accessories'] },
+    { name: 'health & beauty', keywords: ['pharmacy', 'salon', 'spa', 'beauty', 'health', 'barber', 'nail', 'drug', 'wellness', 'fitness', 'gym'] },
+    { name: 'electronics & tech', keywords: ['electronic', 'computer', 'phone', 'tech', 'repair', 'gadget'] },
+    { name: 'pets & animals', keywords: ['pet', 'animal', 'vet'] }
+  ];
+
+  // Finds which broad category a store-type name belongs to, by keyword —
+  // falls back to a single shared "uncategorized" bucket for anything that
+  // doesn't match (there's no way to guess the meaning of a made-up name).
+  function storeCategoryIndex(name) {
+    const lower = name.toLowerCase();
+    for (let i = 0; i < STORE_CATEGORIES.length; i++) {
+      if (STORE_CATEGORIES[i].keywords.some(k => lower.includes(k))) return i;
+    }
+    return STORE_CATEGORIES.length; // uncategorized
+  }
+
   const TYPE_FEATURE_WEIGHT = 0.35;
+  // Weighted similarly to the exact-type feature but still secondary to
+  // location — this is what actually pulls related-but-differently-named
+  // store types closer together than unrelated ones during clustering.
+  const CATEGORY_FEATURE_WEIGHT = 0.3;
+
   function uBuildClusterFeatures(p) {
     const numClasses = uNames.length;
     const oneHot = Array(numClasses).fill(0);
     oneHot[p.label] = TYPE_FEATURE_WEIGHT;
+
+    const numCategories = STORE_CATEGORIES.length + 1;
+    const categoryOneHot = Array(numCategories).fill(0);
+    categoryOneHot[storeCategoryIndex(uNames[p.label] || '')] = CATEGORY_FEATURE_WEIGHT;
+
     const [nx, ny] = normalize(p.x, p.y);
-    return [...oneHot, nx, ny];
+    return [...oneHot, ...categoryOneHot, nx, ny];
   }
 
   function kMeansCluster(pts, k) {
@@ -2545,14 +2625,10 @@
       ctxU.restore();
     }
 
-    // Drawn upright regardless of facing — see the matching note in
-    // drawRobotMarker() above.
     ctxU.save();
     ctxU.translate(uRobotX, uRobotY);
-    ctxU.font = '22px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
-    ctxU.textAlign = 'center';
-    ctxU.textBaseline = 'middle';
-    ctxU.fillText('🚌', 0, 1);
+    ctxU.rotate(FACING_ANGLE[uRobotFacing]);
+    drawBusIcon(ctxU, connected);
     ctxU.restore();
   }
 
