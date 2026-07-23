@@ -186,10 +186,10 @@
   }
 
   .label-names {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 10px;
     margin-bottom: 14px;
-    flex-wrap: wrap;
   }
 
   .label-names input {
@@ -207,10 +207,10 @@
   }
 
   .class-select {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 10px;
     margin-bottom: 14px;
-    flex-wrap: wrap;
   }
 
   .class-btn {
@@ -765,7 +765,7 @@
 
   // ---- Supervised learning demo: label store locations on a map + train a model ----
 
-  const CLASS_COLORS = ['#6c8cff', '#ffb86c', '#4ade80', '#f472b6', '#facc15', '#38bdf8', '#a78bfa', '#fb7185'];
+  const CLASS_COLORS = ['#6c8cff', '#ffb86c', '#4ade80', '#f472b6', '#facc15', '#38bdf8', '#a78bfa', '#fb7185', '#2dd4bf', '#e879f9'];
   const MAX_CLASSES = CLASS_COLORS.length;
   const MIN_CLASSES = 2;
   let names = ['Pizza Place', 'Grocery Store', 'Craft Store'];
@@ -962,7 +962,7 @@
   // has a front and back — so rotating it to match the bus's facing never
   // looks upside-down, just correctly turned to face that direction.
   // Shared by both tabs' canvases (pass ctx or ctxU).
-  function drawBusIcon(ctxTarget, connected) {
+  function drawBusIcon(ctxTarget) {
     const w = 13, h = 20, r = 3.5;
     const x0 = -w / 2, y0 = -h / 2, x1 = w / 2, y1 = h / 2;
 
@@ -978,10 +978,10 @@
     ctxTarget.arcTo(x0, y0, x0 + r, y0, r);
     ctxTarget.closePath();
 
-    // White body (green while a real motor is connected, same as before) —
+    // White body, unchanged regardless of real-motor connection status —
     // an MBTA bus's roof reads as white/silver with a black window band and
     // a purple accent stripe, rather than the plain blue used previously.
-    ctxTarget.fillStyle = connected ? '#4ade80' : '#f2f2f2';
+    ctxTarget.fillStyle = '#f2f2f2';
     ctxTarget.fill();
     ctxTarget.strokeStyle = '#0b0d13';
     ctxTarget.lineWidth = 1.5;
@@ -1905,7 +1905,7 @@
     ctx.save();
     ctx.translate(robotX, robotY);
     ctx.rotate(FACING_ANGLE[robotFacing]);
-    drawBusIcon(ctx, connected);
+    drawBusIcon(ctx);
     ctx.restore();
   }
 
@@ -2628,7 +2628,7 @@
     ctxU.save();
     ctxU.translate(uRobotX, uRobotY);
     ctxU.rotate(FACING_ANGLE[uRobotFacing]);
-    drawBusIcon(ctxU, connected);
+    drawBusIcon(ctxU);
     ctxU.restore();
   }
 
