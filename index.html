@@ -622,6 +622,13 @@
             <div class="counts-row" id="countsRow"></div>
             <button id="resetBusPositionBtn" onclick="resetRobotPosition()" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;">📍 Reset Bus Position</button>
           </div>
+
+          <div class="trainer-controls">
+            <button id="trainBtn" onclick="trainRouteModel()" disabled>Train the Model</button>
+            <button id="predictRouteBtn" onclick="predictRoute()" disabled>Predict Route</button>
+            <button id="undoBtn" onclick="undoPoint()">Undo Last Store</button>
+            <button id="clearBtn" onclick="clearPoints()">Clear All Stores</button>
+          </div>
         </div>
 
         <div class="motor-column">
@@ -665,13 +672,6 @@
       </div>
 
       <div id="predictResult"></div>
-
-      <div class="trainer-controls">
-        <button id="trainBtn" onclick="trainRouteModel()" disabled>Train the Model</button>
-        <button id="predictRouteBtn" onclick="predictRoute()" disabled>Predict Route</button>
-        <button id="undoBtn" onclick="undoPoint()">Undo Last Store</button>
-        <button id="clearBtn" onclick="clearPoints()">Clear All Stores</button>
-      </div>
     </div>
   </div>
 
