@@ -827,14 +827,15 @@
   let uAutopilotTrail = [];
   let uAutopilotActive = false;
   let uAutopilotWaypoints = [];
+  let uAutopilotStopFlags = [];
   let uAutopilotIndex = 0;
   let uAutopilotFrame = null;
   let uAutopilotLastTime = null;
   let uAutopilotDriveDir = 'forward';
-  // Stores already credited as passed during this autopilot run — see
-  // autopilotVisited (the Supervised tab's copy) for why this is proximity-
-  // based and Set-backed rather than a simple sequential counter.
-  let uAutopilotVisited = new Set();
+  // How many predicted stops the bus has actually driven to (its own
+  // official waypoint) so far this run — see autopilotStopsReached (the
+  // Supervised tab's copy) for why badges reveal one at a time, in order.
+  let uAutopilotStopsReached = 0;
 
   function nearestValue(v, arr) {
     return arr.reduce((best, cur) => Math.abs(cur - v) < Math.abs(best - v) ? cur : best);
@@ -1469,17 +1470,15 @@
 
   let autopilotActive = false;
   let autopilotWaypoints = [];
+  let autopilotStopFlags = [];
   let autopilotIndex = 0;
   let autopilotFrame = null;
   let autopilotLastTime = null;
-  // Stores already credited as passed during this autopilot run, checked by
-  // proximity every frame (same criteria as checkRouteVisits(), the manual
-  // demo's version) rather than only at each leg's own intended endpoint —
-  // so a store the bus happens to drive by on the way to a different one
-  // still gets recorded. A Set guarantees each stop is only ever recorded
-  // once per run, however many times it's actually passed, and gold order
-  // badges are only drawn for stops that appear in it.
-  let autopilotVisited = new Set();
+  // How many predicted stops the bus has actually driven to (its own
+  // official waypoint, not just an incidental pass-by) so far this run —
+  // gold order badges only appear for stops up to this count, revealing one
+  // at a time, in order, as the bus actually arrives at each in turn.
+  let autopilotStopsReached = 0;
   function facingNeededFor(from, to) {
     const dx = to.x - from.x, dy = to.y - from.y;
     if (Math.abs(dx) > Math.abs(dy)) return dx > 0 ? 'right' : 'left';
@@ -1513,15 +1512,17 @@
   // follow. Also marks which waypoints are actual stops vs. corner turns.
   function buildAutopilotRoute() {
     const waypoints = [{ x: robotX, y: robotY }];
+    const stopFlags = [false];
     let prev = waypoints[0];
     for (const stop of predictedOrder) {
       const seg = roadPathBetween(prev, stop);
       for (let i = 1; i < seg.length; i++) {
         waypoints.push(clampToRoadBounds(seg[i]));
+        stopFlags.push(i === seg.length - 1);
       }
       prev = stop;
     }
-    return { waypoints };
+    return { waypoints, stopFlags };
   }
 
   // Finds the nearest crossing road straight ahead of (x, y) in the given
@@ -1555,10 +1556,11 @@
     // blue trail must stay visible, so only the position is reset here.
     resetRobotPositionOnly();
     autopilotTrail = [{ x: robotX, y: robotY }];
-    autopilotVisited = new Set();
+    autopilotStopsReached = 0;
 
     const built = buildAutopilotRoute();
     autopilotWaypoints = built.waypoints;
+    autopilotStopFlags = built.stopFlags;
     autopilotIndex = 1;
     autopilotActive = true;
     autopilotLastTime = null;
@@ -1622,6 +1624,7 @@
     if (isBehind && !isAtIntersection(robotX, robotY)) {
       const detour = nearestIntersectionAhead(robotX, robotY, robotFacing);
       autopilotWaypoints.splice(autopilotIndex, 0, detour);
+      autopilotStopFlags.splice(autopilotIndex, 0, false);
       target = autopilotWaypoints[autopilotIndex];
       needed = facingNeededFor({ x: robotX, y: robotY }, target);
     }
@@ -1641,29 +1644,8 @@
     else startDriving();
   }
 
-  // Proximity-based visit detection for autopilot — mirrors checkRouteVisits()
-  // (the manual demo's version) but records into autopilotVisited instead of
-  // visitedRoute, credits a stop the instant the bus passes within range on
-  // its own road (not only when that stop is this leg's intended endpoint),
-  // and never re-adds one already recorded this run.
-  function checkAutopilotVisits() {
-    for (const p of predictedOrder) {
-      if (autopilotVisited.has(p)) continue;
-      if (!isNearStop(p, robotX, robotY)) continue;
-      autopilotVisited.add(p);
-      // Route completion has its own message from finishAutopilotRoute(),
-      // fired once the bus truly finishes driving — this only reports
-      // progress, since a later leg can pass a store ranked earlier (or
-      // vice versa), so reaching the last stop here doesn't mean the bus
-      // is actually done driving yet.
-      const subEl = document.getElementById('motorSubstatus-supervised');
-      if (subEl) subEl.textContent = `Reached stop ${autopilotVisited.size} of ${predictedOrder.length}`;
-    }
-  }
-
   function autopilotDriveStep(timestamp) {
     if (!autopilotActive) return;
-    checkAutopilotVisits();
     if (autopilotLastTime == null) autopilotLastTime = timestamp;
     const dt = Math.min((timestamp - autopilotLastTime) / 1000, 0.1);
     autopilotLastTime = timestamp;
@@ -1677,7 +1659,17 @@
       robotX = target.x;
       robotY = target.y;
       autopilotTrail.push({ x: robotX, y: robotY });
-      checkAutopilotVisits(); // catch this leg's exact endpoint too
+
+      if (autopilotStopFlags[autopilotIndex]) {
+        autopilotStopsReached++; // reveal this stop's predicted-order badge
+        const subEl = document.getElementById('motorSubstatus-supervised');
+        if (subEl) {
+          const total = predictedOrder.length;
+          subEl.textContent = autopilotStopsReached < total
+            ? `Reached stop ${autopilotStopsReached} of ${total}`
+            : `Reached final stop (${total} of ${total})`;
+        }
+      }
 
       draw();
       driveRealMotor('stop');
@@ -1703,7 +1695,7 @@
     const statusEl = document.getElementById('motorStatus-supervised');
     const subEl = document.getElementById('motorSubstatus-supervised');
     if (statusEl) { statusEl.textContent = '🚌 Autopilot complete'; statusEl.classList.remove('moving'); }
-    if (subEl) subEl.textContent = `Visited all ${autopilotVisited.size} predicted stops`;
+    if (subEl) subEl.textContent = `Visited all ${autopilotStopsReached} predicted stops`;
     draw();
   }
 
@@ -1726,11 +1718,10 @@
       drawOrderBadge(ctx, p.x - 10, p.y - 13, i + 1, '#38bdf8');
     });
 
-    // predicted-order badges (gold) — revealed as the bus actually drives
-    // past each stop (in any order it happens to pass them), rather than
-    // all up front
-    predictedOrder.forEach((p, i) => {
-      if (autopilotVisited.has(p)) drawOrderBadge(ctx, p.x + 10, p.y - 13, i + 1, '#facc15');
+    // predicted-order badges (gold) — revealed one at a time, in order, as
+    // the bus actually drives to each stop
+    predictedOrder.slice(0, autopilotStopsReached).forEach((p, i) => {
+      drawOrderBadge(ctx, p.x + 10, p.y - 13, i + 1, '#facc15');
     });
 
     // draw the live motor position on top of everything
@@ -1987,7 +1978,7 @@
     resetRobotPositionOnly();
     routeTrail = [{ x: robotX, y: robotY }];
     autopilotTrail = [];
-    autopilotVisited = new Set();
+    autopilotStopsReached = 0;
     draw();
   }
 
@@ -2379,15 +2370,17 @@
 
   function uBuildAutopilotRoute() {
     const waypoints = [{ x: uRobotX, y: uRobotY }];
+    const stopFlags = [false];
     let prev = waypoints[0];
     for (const stop of uPredictedOrder) {
       const seg = roadPathBetween(prev, stop);
       for (let i = 1; i < seg.length; i++) {
         waypoints.push(clampToRoadBounds(seg[i]));
+        stopFlags.push(i === seg.length - 1);
       }
       prev = stop;
     }
-    return { waypoints };
+    return { waypoints, stopFlags };
   }
 
   function uResetRobotPositionOnly() {
@@ -2401,7 +2394,7 @@
     uResetRobotPositionOnly();
     uRouteTrail = [{ x: uRobotX, y: uRobotY }];
     uAutopilotTrail = [];
-    uAutopilotVisited = new Set();
+    uAutopilotStopsReached = 0;
     drawUnsup();
   }
 
@@ -2411,11 +2404,12 @@
 
     uResetRobotPositionOnly();
     uAutopilotTrail = [{ x: uRobotX, y: uRobotY }];
-    uAutopilotVisited = new Set();
+    uAutopilotStopsReached = 0;
     uAutopilotDriveDir = 'forward';
 
     const built = uBuildAutopilotRoute();
     uAutopilotWaypoints = built.waypoints;
+    uAutopilotStopFlags = built.stopFlags;
     uAutopilotIndex = 1;
     uAutopilotActive = true;
     uAutopilotLastTime = null;
@@ -2462,14 +2456,33 @@
       uFinishAutopilotRoute();
       return;
     }
-    const target = uAutopilotWaypoints[uAutopilotIndex];
-    const needed = uFacingNeededFor({ x: uRobotX, y: uRobotY }, target);
+    let target = uAutopilotWaypoints[uAutopilotIndex];
+    let needed = uFacingNeededFor({ x: uRobotX, y: uRobotY }, target);
 
     // A target exactly behind the bus (180° from its current facing) is
     // reached by backing up — no turn, and no need to be at an intersection.
     const idxC = FACING_ORDER.indexOf(uRobotFacing);
-    const idxN = FACING_ORDER.indexOf(needed);
-    const isBehind = ((idxN - idxC + 4) % 4) === 2;
+    let idxN = FACING_ORDER.indexOf(needed);
+    let isBehind = ((idxN - idxC + 4) % 4) === 2;
+
+    // Any OTHER direction change needs a real pivot, which only works at an
+    // intersection — and backing up (above) can leave the bus sitting at a
+    // store that isn't one. Without this detour, attemptTurn silently fails
+    // to rotate the bus off-intersection, so it starts driving on the wrong
+    // axis entirely — which is what made it look like it was backing up
+    // uncontrollably. Detour to the nearest intersection ahead first;
+    // arriving there re-enters this same check, which will then find it CAN
+    // turn, since that detour point is always an intersection.
+    if (!isBehind && needed !== uRobotFacing && !isAtIntersection(uRobotX, uRobotY)) {
+      const detour = nearestIntersectionAhead(uRobotX, uRobotY, uRobotFacing);
+      uAutopilotWaypoints.splice(uAutopilotIndex, 0, detour);
+      uAutopilotStopFlags.splice(uAutopilotIndex, 0, false);
+      target = uAutopilotWaypoints[uAutopilotIndex];
+      needed = uFacingNeededFor({ x: uRobotX, y: uRobotY }, target);
+      idxN = FACING_ORDER.indexOf(needed);
+      isBehind = ((idxN - idxC + 4) % 4) === 2;
+    }
+
     const turns = isBehind ? [] : turnSequenceFor(uRobotFacing, needed);
     const driveDir = isBehind ? 'backward' : 'forward';
 
@@ -2491,33 +2504,8 @@
     else startDriving();
   }
 
-  // Proximity-based visit detection for autopilot — see checkAutopilotVisits
-  // (the Supervised tab's copy) for the reasoning; this credits a stop the
-  // instant the bus passes within range on its own road, not only when that
-  // stop is this leg's intended endpoint.
-  function checkUAutopilotVisits() {
-    for (const p of uPredictedOrder) {
-      if (uAutopilotVisited.has(p)) continue;
-      if (!isNearStop(p, uRobotX, uRobotY)) continue;
-      uAutopilotVisited.add(p);
-      // See checkAutopilotVisits (the Supervised tab's copy) for why
-      // completion is left to uFinishAutopilotRoute() instead of being
-      // claimed here. The reported count only advances through the
-      // unbroken prefix of the route already visited (see drawUnsup's
-      // badge loop) — a stop passed out of turn is still recorded above,
-      // but isn't announced or labeled until its own place in line comes up.
-      const subEl = document.getElementById('motorSubstatus-unsupervised');
-      if (subEl) {
-        let revealed = 0;
-        while (revealed < uPredictedOrder.length && uAutopilotVisited.has(uPredictedOrder[revealed])) revealed++;
-        subEl.textContent = `Reached stop ${revealed} of ${uPredictedOrder.length}`;
-      }
-    }
-  }
-
   function uAutopilotDriveStep(timestamp) {
     if (!uAutopilotActive) return;
-    checkUAutopilotVisits();
     if (uAutopilotLastTime == null) uAutopilotLastTime = timestamp;
     const dt = Math.min((timestamp - uAutopilotLastTime) / 1000, 0.1);
     uAutopilotLastTime = timestamp;
@@ -2531,7 +2519,17 @@
       uRobotX = target.x;
       uRobotY = target.y;
       uAutopilotTrail.push({ x: uRobotX, y: uRobotY });
-      checkUAutopilotVisits(); // catch this leg's exact endpoint too
+
+      if (uAutopilotStopFlags[uAutopilotIndex]) {
+        uAutopilotStopsReached++; // reveal this stop's predicted-order badge
+        const subEl = document.getElementById('motorSubstatus-unsupervised');
+        if (subEl) {
+          const total = uPredictedOrder.length;
+          subEl.textContent = uAutopilotStopsReached < total
+            ? `Reached stop ${uAutopilotStopsReached} of ${total}`
+            : `Reached final stop (${total} of ${total})`;
+        }
+      }
 
       drawUnsup();
       driveRealMotor('stop');
@@ -2557,7 +2555,7 @@
     const statusEl = document.getElementById('motorStatus-unsupervised');
     const subEl = document.getElementById('motorSubstatus-unsupervised');
     if (statusEl) { statusEl.textContent = '🚌 Autopilot complete'; statusEl.classList.remove('moving'); }
-    if (subEl) subEl.textContent = `Visited all ${uAutopilotVisited.size} predicted stops`;
+    if (subEl) subEl.textContent = `Visited all ${uAutopilotStopsReached} predicted stops`;
     drawUnsup();
   }
 
@@ -2631,12 +2629,9 @@
 
     for (const p of uPoints) drawBusStop(ctxU, p.x, p.y, CLASS_COLORS[p.label]);
 
-    // Badges only reveal in order — a stop passed early (out of sequence)
-    // is still recorded in uAutopilotVisited, but doesn't get labeled until
-    // every stop ahead of it in the route has also been reached.
-    let uRevealedCount = 0;
-    while (uRevealedCount < uPredictedOrder.length && uAutopilotVisited.has(uPredictedOrder[uRevealedCount])) uRevealedCount++;
-    uPredictedOrder.slice(0, uRevealedCount).forEach((p, i) => {
+    // predicted-order badges (gold) — revealed one at a time, in order, as
+    // the bus actually drives to each stop
+    uPredictedOrder.slice(0, uAutopilotStopsReached).forEach((p, i) => {
       drawOrderBadge(ctxU, p.x + 10, p.y - 13, i + 1, '#facc15');
     });
 
