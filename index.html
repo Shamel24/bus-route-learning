@@ -2502,9 +2502,16 @@
       uAutopilotVisited.add(p);
       // See checkAutopilotVisits (the Supervised tab's copy) for why
       // completion is left to uFinishAutopilotRoute() instead of being
-      // claimed here.
+      // claimed here. The reported count only advances through the
+      // unbroken prefix of the route already visited (see drawUnsup's
+      // badge loop) — a stop passed out of turn is still recorded above,
+      // but isn't announced or labeled until its own place in line comes up.
       const subEl = document.getElementById('motorSubstatus-unsupervised');
-      if (subEl) subEl.textContent = `Reached stop ${uAutopilotVisited.size} of ${uPredictedOrder.length}`;
+      if (subEl) {
+        let revealed = 0;
+        while (revealed < uPredictedOrder.length && uAutopilotVisited.has(uPredictedOrder[revealed])) revealed++;
+        subEl.textContent = `Reached stop ${revealed} of ${uPredictedOrder.length}`;
+      }
     }
   }
 
@@ -2624,8 +2631,13 @@
 
     for (const p of uPoints) drawBusStop(ctxU, p.x, p.y, CLASS_COLORS[p.label]);
 
-    uPredictedOrder.forEach((p, i) => {
-      if (uAutopilotVisited.has(p)) drawOrderBadge(ctxU, p.x + 10, p.y - 13, i + 1, '#facc15');
+    // Badges only reveal in order — a stop passed early (out of sequence)
+    // is still recorded in uAutopilotVisited, but doesn't get labeled until
+    // every stop ahead of it in the route has also been reached.
+    let uRevealedCount = 0;
+    while (uRevealedCount < uPredictedOrder.length && uAutopilotVisited.has(uPredictedOrder[uRevealedCount])) uRevealedCount++;
+    uPredictedOrder.slice(0, uRevealedCount).forEach((p, i) => {
+      drawOrderBadge(ctxU, p.x + 10, p.y - 13, i + 1, '#facc15');
     });
 
     uDrawRobotMarker();
