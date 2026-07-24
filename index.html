@@ -285,14 +285,14 @@
     font-weight: 700;
   }
 
-  #canvas-wrap {
+  #canvas-wrap, #canvas-wrap-unsup {
     position: relative;
     width: 100%;
     max-width: 480px;
     margin: 0 auto;
   }
 
-  #mapCanvas {
+  #mapCanvas, #mapCanvasUnsup {
     width: 100%;
     aspect-ratio: 480 / 380;
     display: block;
@@ -368,7 +368,7 @@
   #predictRouteBtn, #uPredictRouteBtn { background: #a78bfa; color: white; }
   #predictRouteBtn:disabled, #uPredictRouteBtn:disabled { background: #3a3f4f; color: var(--muted); cursor: not-allowed; }
 
-  #predictResult {
+  #predictResult, #uPredictResult {
     margin-top: 10px;
     font-size: 0.85rem;
     color: var(--text);
@@ -555,31 +555,6 @@
     color: var(--text);
     font-size: 0.75rem;
     font-family: ui-monospace, monospace;
-  }
-
-  /* ---- Unsupervised Learning tab: its own map + clustering predictor ---- */
-  #canvas-wrap-unsup {
-    position: relative;
-    width: 100%;
-    max-width: 480px;
-    margin: 0 auto;
-  }
-
-  #mapCanvasUnsup {
-    width: 100%;
-    aspect-ratio: 480 / 380;
-    display: block;
-    background: #0b0d13;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    cursor: crosshair;
-  }
-
-  #uPredictResult {
-    margin-top: 10px;
-    font-size: 0.85rem;
-    color: var(--text);
-    min-height: 18px;
   }
 </style>
 </head>
@@ -796,11 +771,6 @@
   let visitedRoute = [];  // ordered array of point objects, recorded as the bus drives past them
   let predictedOrder = []; // ordered array of point objects, from the model's most recent route prediction
   let routeModel = null;   // { W: [...], b, numClasses } — trained on visitedRoute
-  // True once the user has manually driven the bus backward anywhere in
-  // their demonstrated route — if they showed backing up is fine, autopilot
-  // is allowed to back up too, instead of always detouring to an
-  // intersection to pivot 180°.
-  let demoUsedBackward = false;
 
   // Live motor position on the map, constrained to the road network: the
   // motor always sits exactly on a road, facing one of 4 cardinal
@@ -857,7 +827,6 @@
   let uAutopilotTrail = [];
   let uAutopilotActive = false;
   let uAutopilotWaypoints = [];
-  let uAutopilotStopFlags = [];
   let uAutopilotIndex = 0;
   let uAutopilotFrame = null;
   let uAutopilotLastTime = null;
@@ -1117,6 +1086,7 @@
     names.splice(i, 1);
 
     // drop points that belonged to the deleted type, and shift labels above it down by one
+    haltAutopilotIfActive();
     points = points
       .filter(p => p.label !== i)
       .map(p => p.label > i ? { ...p, label: p.label - 1 } : p);
@@ -1239,6 +1209,7 @@
       }
       return;
     }
+    haltAutopilotIfActive();
     points.push({ x: snap.x, y: snap.y, label: currentClass });
     // A new pin doesn't invalidate a trained model (it's parameterized by
     // type + location, not a fixed point set) — but any previously
@@ -1251,7 +1222,7 @@
   });
 
   function undoPoint() {
-    if (autopilotActive) { stopAutopilot(); driveRealMotor('stop'); }
+    haltAutopilotIfActive();
     const removed = points.pop();
     if (removed) {
       visitedRoute = visitedRoute.filter(p => p !== removed);
@@ -1265,11 +1236,10 @@
   }
 
   function clearPoints() {
-    if (autopilotActive) { stopAutopilot(); driveRealMotor('stop'); }
+    haltAutopilotIfActive();
     points = [];
     visitedRoute = [];
     predictedOrder = [];
-    demoUsedBackward = false;
     currentlyNearStops = new Set();
     renderRouteLog();
     disableRouteModelUi();
@@ -1278,10 +1248,9 @@
   }
 
   function clearRoute() {
-    if (autopilotActive) { stopAutopilot(); driveRealMotor('stop'); }
+    haltAutopilotIfActive();
     visitedRoute = [];
     predictedOrder = [];
-    demoUsedBackward = false;
     currentlyNearStops = new Set();
     renderRouteLog();
     disableRouteModelUi();
@@ -1367,6 +1336,7 @@
   // route order that stays as close as possible to how you actually drove.
   function trainRouteModel() {
     if (visitedRoute.length < 3) return;
+    haltAutopilotIfActive();
     const featLen = buildFeatures(visitedRoute[0]).length;
     const data = visitedRoute.map((p, i) => ({
       features: buildFeatures(p),
@@ -1499,7 +1469,6 @@
 
   let autopilotActive = false;
   let autopilotWaypoints = [];
-  let autopilotStopFlags = [];
   let autopilotIndex = 0;
   let autopilotFrame = null;
   let autopilotLastTime = null;
@@ -1511,10 +1480,6 @@
   // once per run, however many times it's actually passed, and gold order
   // badges are only drawn for stops that appear in it.
   let autopilotVisited = new Set();
-  // 'forward' or 'backward' — only ever 'backward' for a leg where the next
-  // stop is directly behind the bus AND the user's own demo backed up too.
-  let autopilotDriveDir = 'forward';
-
   function facingNeededFor(from, to) {
     const dx = to.x - from.x, dy = to.y - from.y;
     if (Math.abs(dx) > Math.abs(dy)) return dx > 0 ? 'right' : 'left';
@@ -1548,17 +1513,15 @@
   // follow. Also marks which waypoints are actual stops vs. corner turns.
   function buildAutopilotRoute() {
     const waypoints = [{ x: robotX, y: robotY }];
-    const stopFlags = [false];
     let prev = waypoints[0];
     for (const stop of predictedOrder) {
       const seg = roadPathBetween(prev, stop);
       for (let i = 1; i < seg.length; i++) {
         waypoints.push(clampToRoadBounds(seg[i]));
-        stopFlags.push(i === seg.length - 1);
       }
       prev = stop;
     }
-    return { waypoints, stopFlags };
+    return { waypoints };
   }
 
   // Finds the nearest crossing road straight ahead of (x, y) in the given
@@ -1593,11 +1556,9 @@
     resetRobotPositionOnly();
     autopilotTrail = [{ x: robotX, y: robotY }];
     autopilotVisited = new Set();
-    autopilotDriveDir = 'forward';
 
     const built = buildAutopilotRoute();
     autopilotWaypoints = built.waypoints;
-    autopilotStopFlags = built.stopFlags;
     autopilotIndex = 1;
     autopilotActive = true;
     autopilotLastTime = null;
@@ -1614,6 +1575,13 @@
     autopilotActive = false;
     if (autopilotFrame) { cancelAnimationFrame(autopilotFrame); autopilotFrame = null; }
     autopilotLastTime = null;
+  }
+
+  // Every place that mutates predictedOrder or the stored points must call
+  // this first — otherwise an in-progress autopilot run keeps driving a
+  // waypoint list built from the route that just got invalidated.
+  function haltAutopilotIfActive() {
+    if (autopilotActive) { stopAutopilot(); driveRealMotor('stop'); }
   }
 
   function doAutopilotTurn(dir, onDone) {
@@ -1644,45 +1612,27 @@
     let target = autopilotWaypoints[autopilotIndex];
     let needed = facingNeededFor({ x: robotX, y: robotY }, target);
     const idxC = FACING_ORDER.indexOf(robotFacing);
-    let isBehind = ((FACING_ORDER.indexOf(needed) - idxC + 4) % 4) === 2;
+    const isBehind = ((FACING_ORDER.indexOf(needed) - idxC + 4) % 4) === 2;
 
-    let turns;
-    let driveDir = 'forward';
-
-    if (isBehind && demoUsedBackward) {
-      // The user's own demonstration backed up somewhere too, so this leg
-      // is allowed to as well — no turn needed, and no need to be at an
-      // intersection.
-      turns = [];
-      driveDir = 'backward';
-    } else {
-      // Otherwise a target directly behind the bus needs a 180° pivot,
-      // which only works at an intersection. If it isn't at one right now,
-      // detour to the nearest intersection ahead first — arriving there
-      // re-enters this same check, which will then find it CAN turn, since
-      // that detour point is always an intersection.
-      if (isBehind && !isAtIntersection(robotX, robotY)) {
-        const detour = nearestIntersectionAhead(robotX, robotY, robotFacing);
-        autopilotWaypoints.splice(autopilotIndex, 0, detour);
-        autopilotStopFlags.splice(autopilotIndex, 0, false);
-        target = autopilotWaypoints[autopilotIndex];
-        needed = facingNeededFor({ x: robotX, y: robotY }, target);
-        isBehind = ((FACING_ORDER.indexOf(needed) - idxC + 4) % 4) === 2;
-      }
-      turns = turnSequenceFor(robotFacing, needed);
+    // A target directly behind the bus needs a 180° pivot, which only works
+    // at an intersection. If it isn't at one right now, detour to the
+    // nearest intersection ahead first — arriving there re-enters this same
+    // check, which will then find it CAN turn, since that detour point is
+    // always an intersection.
+    if (isBehind && !isAtIntersection(robotX, robotY)) {
+      const detour = nearestIntersectionAhead(robotX, robotY, robotFacing);
+      autopilotWaypoints.splice(autopilotIndex, 0, detour);
+      target = autopilotWaypoints[autopilotIndex];
+      needed = facingNeededFor({ x: robotX, y: robotY }, target);
     }
+    const turns = turnSequenceFor(robotFacing, needed);
 
     const startDriving = () => {
       if (!autopilotActive) return;
-      autopilotDriveDir = driveDir;
-      setDpadUi('supervised', driveDir);
-      driveRealMotor(driveDir);
+      setDpadUi('supervised', 'forward');
+      driveRealMotor('forward');
       const statusEl = document.getElementById('motorStatus-supervised');
-      if (statusEl) {
-        statusEl.textContent = driveDir === 'backward'
-          ? '🚌 Autopilot: backing up to next stop'
-          : '🚌 Autopilot: driving predicted route';
-      }
+      if (statusEl) statusEl.textContent = '🚌 Autopilot: driving predicted route';
       autopilotLastTime = null;
       autopilotFrame = requestAnimationFrame(autopilotDriveStep);
     };
@@ -1699,24 +1649,15 @@
   function checkAutopilotVisits() {
     for (const p of predictedOrder) {
       if (autopilotVisited.has(p)) continue;
-      const info = roadInfoFor(p);
-      if (!info) continue;
-      const onSameRoad = info.axis === 'h'
-        ? Math.abs(robotY - info.coord) <= SAME_ROAD_TOLERANCE
-        : Math.abs(robotX - info.coord) <= SAME_ROAD_TOLERANCE;
-      if (!onSameRoad) continue;
-
-      const dx = p.x - robotX, dy = p.y - robotY;
-      if (Math.sqrt(dx * dx + dy * dy) <= STOP_VISIT_TOLERANCE) {
-        autopilotVisited.add(p);
-        const subEl = document.getElementById('motorSubstatus-supervised');
-        if (subEl) {
-          const total = predictedOrder.length;
-          subEl.textContent = autopilotVisited.size < total
-            ? `Reached stop ${autopilotVisited.size} of ${total}`
-            : `Reached final stop (${total} of ${total})`;
-        }
-      }
+      if (!isNearStop(p, robotX, robotY)) continue;
+      autopilotVisited.add(p);
+      // Route completion has its own message from finishAutopilotRoute(),
+      // fired once the bus truly finishes driving — this only reports
+      // progress, since a later leg can pass a store ranked earlier (or
+      // vice versa), so reaching the last stop here doesn't mean the bus
+      // is actually done driving yet.
+      const subEl = document.getElementById('motorSubstatus-supervised');
+      if (subEl) subEl.textContent = `Reached stop ${autopilotVisited.size} of ${predictedOrder.length}`;
     }
   }
 
@@ -1746,11 +1687,10 @@
       return;
     }
 
-    const sign = autopilotDriveDir === 'backward' ? -1 : 1;
-    if (robotFacing === 'left') robotX -= dist * sign;
-    else if (robotFacing === 'right') robotX += dist * sign;
-    else if (robotFacing === 'up') robotY -= dist * sign;
-    else if (robotFacing === 'down') robotY += dist * sign;
+    if (robotFacing === 'left') robotX -= dist;
+    else if (robotFacing === 'right') robotX += dist;
+    else if (robotFacing === 'up') robotY -= dist;
+    else if (robotFacing === 'down') robotY += dist;
 
     draw();
     autopilotFrame = requestAnimationFrame(autopilotDriveStep);
@@ -1959,6 +1899,22 @@
   const STOP_VISIT_TOLERANCE = 16; // px — how close the bus needs to pass to "reach" a store
   const SAME_ROAD_TOLERANCE = 3; // px — how exactly the bus's fixed coordinate must match the stop's road
 
+  // True once (x, y) is close enough to p, while actually traveling on p's
+  // own road, to count as "reaching" it. Checking road membership (not just
+  // straight-line distance) avoids crediting a stop that merely sits close
+  // by on a different, perpendicular road. Shared by the manual-drive and
+  // both tabs' autopilot visit-tracking below.
+  function isNearStop(p, x, y) {
+    const info = roadInfoFor(p);
+    if (!info) return false;
+    const onSameRoad = info.axis === 'h'
+      ? Math.abs(y - info.coord) <= SAME_ROAD_TOLERANCE
+      : Math.abs(x - info.coord) <= SAME_ROAD_TOLERANCE;
+    if (!onSameRoad) return false;
+    const dx = p.x - x, dy = p.y - y;
+    return Math.sqrt(dx * dx + dy * dy) <= STOP_VISIT_TOLERANCE;
+  }
+
   // Tracks which stops are currently within range, so a visit is only
   // recorded the moment the bus ENTERS a store's range — not on every
   // frame it happens to still be nearby. Without this, two stores placed
@@ -1975,22 +1931,13 @@
   function checkRouteVisits() {
     const stillNear = new Set();
     for (const p of points) {
-      const info = roadInfoFor(p);
-      if (!info) continue;
-      const onSameRoad = info.axis === 'h'
-        ? Math.abs(robotY - info.coord) <= SAME_ROAD_TOLERANCE
-        : Math.abs(robotX - info.coord) <= SAME_ROAD_TOLERANCE;
-      if (!onSameRoad) continue;
-
-      const dx = p.x - robotX, dy = p.y - robotY;
-      if (Math.sqrt(dx * dx + dy * dy) <= STOP_VISIT_TOLERANCE) {
-        stillNear.add(p);
-        if (!currentlyNearStops.has(p)) {
-          visitedRoute.push(p);
-          renderRouteLog();
-          disableRouteModelUi(); // new data means the old trained model is stale
-          updateStatus();
-        }
+      if (!isNearStop(p, robotX, robotY)) continue;
+      stillNear.add(p);
+      if (!currentlyNearStops.has(p)) {
+        visitedRoute.push(p);
+        renderRouteLog();
+        disableRouteModelUi(); // new data means the old trained model is stale
+        updateStatus();
       }
     }
     currentlyNearStops = stillNear;
@@ -2042,7 +1989,7 @@
   }
 
   function resetRobotPosition() {
-    if (autopilotActive) { stopAutopilot(); driveRealMotor('stop'); }
+    haltAutopilotIfActive();
     resetRobotPositionOnly();
     routeTrail = [{ x: robotX, y: robotY }];
     autopilotTrail = [];
@@ -2134,6 +2081,7 @@
     uSyncNamesFromInputs();
     uNames.splice(i, 1);
 
+    uHaltAutopilotIfActive();
     uPoints = uPoints
       .filter(p => p.label !== i)
       .map(p => p.label > i ? { ...p, label: p.label - 1 } : p);
@@ -2244,6 +2192,7 @@
       }
       return;
     }
+    uHaltAutopilotIfActive();
     uPoints.push({ x: snap.x, y: snap.y, label: uCurrentClass });
     // A new pin means the last predicted route no longer covers every store.
     uPredictedOrder = [];
@@ -2254,7 +2203,7 @@
   });
 
   function uUndoPoint() {
-    if (uAutopilotActive) { uStopAutopilot(); driveRealMotor('stop'); }
+    uHaltAutopilotIfActive();
     const removed = uPoints.pop();
     if (removed) uPredictedOrder = uPredictedOrder.filter(p => p !== removed);
     updateUStatus();
@@ -2262,7 +2211,7 @@
   }
 
   function uClearPoints() {
-    if (uAutopilotActive) { uStopAutopilot(); driveRealMotor('stop'); }
+    uHaltAutopilotIfActive();
     uPoints = [];
     uPredictedOrder = [];
     const resultEl = document.getElementById('uPredictResult');
@@ -2437,17 +2386,15 @@
 
   function uBuildAutopilotRoute() {
     const waypoints = [{ x: uRobotX, y: uRobotY }];
-    const stopFlags = [false];
     let prev = waypoints[0];
     for (const stop of uPredictedOrder) {
       const seg = roadPathBetween(prev, stop);
       for (let i = 1; i < seg.length; i++) {
         waypoints.push(clampToRoadBounds(seg[i]));
-        stopFlags.push(i === seg.length - 1);
       }
       prev = stop;
     }
-    return { waypoints, stopFlags };
+    return { waypoints };
   }
 
   function uResetRobotPositionOnly() {
@@ -2457,7 +2404,7 @@
   }
 
   function uResetRobotPosition() {
-    if (uAutopilotActive) { uStopAutopilot(); driveRealMotor('stop'); }
+    uHaltAutopilotIfActive();
     uResetRobotPositionOnly();
     uRouteTrail = [{ x: uRobotX, y: uRobotY }];
     uAutopilotTrail = [];
@@ -2476,7 +2423,6 @@
 
     const built = uBuildAutopilotRoute();
     uAutopilotWaypoints = built.waypoints;
-    uAutopilotStopFlags = built.stopFlags;
     uAutopilotIndex = 1;
     uAutopilotActive = true;
     uAutopilotLastTime = null;
@@ -2493,6 +2439,12 @@
     uAutopilotActive = false;
     if (uAutopilotFrame) { cancelAnimationFrame(uAutopilotFrame); uAutopilotFrame = null; }
     uAutopilotLastTime = null;
+  }
+
+  // See haltAutopilotIfActive (the Supervised tab's copy) for why every
+  // mutator of uPredictedOrder must call this first.
+  function uHaltAutopilotIfActive() {
+    if (uAutopilotActive) { uStopAutopilot(); driveRealMotor('stop'); }
   }
 
   function uDoAutopilotTurn(dir, onDone) {
@@ -2553,24 +2505,13 @@
   function checkUAutopilotVisits() {
     for (const p of uPredictedOrder) {
       if (uAutopilotVisited.has(p)) continue;
-      const info = roadInfoFor(p);
-      if (!info) continue;
-      const onSameRoad = info.axis === 'h'
-        ? Math.abs(uRobotY - info.coord) <= SAME_ROAD_TOLERANCE
-        : Math.abs(uRobotX - info.coord) <= SAME_ROAD_TOLERANCE;
-      if (!onSameRoad) continue;
-
-      const dx = p.x - uRobotX, dy = p.y - uRobotY;
-      if (Math.sqrt(dx * dx + dy * dy) <= STOP_VISIT_TOLERANCE) {
-        uAutopilotVisited.add(p);
-        const subEl = document.getElementById('motorSubstatus-unsupervised');
-        if (subEl) {
-          const total = uPredictedOrder.length;
-          subEl.textContent = uAutopilotVisited.size < total
-            ? `Reached stop ${uAutopilotVisited.size} of ${total}`
-            : `Reached final stop (${total} of ${total})`;
-        }
-      }
+      if (!isNearStop(p, uRobotX, uRobotY)) continue;
+      uAutopilotVisited.add(p);
+      // See checkAutopilotVisits (the Supervised tab's copy) for why
+      // completion is left to uFinishAutopilotRoute() instead of being
+      // claimed here.
+      const subEl = document.getElementById('motorSubstatus-unsupervised');
+      if (subEl) subEl.textContent = `Reached stop ${uAutopilotVisited.size} of ${uPredictedOrder.length}`;
     }
   }
 
@@ -2736,16 +2677,11 @@
     SERVICE: '0000fd02-0000-1000-8000-00805f9b34fb',
     WRITE:   '0000fd02-0001-1000-8000-00805f9b34fb',
     NOTIFY:  '0000fd02-0002-1000-8000-00805f9b34fb',
-    INFO_REQUEST: 0,
-    INFO_RESPONSE: 1,
     DEVICE_NOTIFICATION_REQUEST: 40,
-    DEVICE_NOTIFICATION_RESPONSE: 41,
     MOTOR_RUN_COMMAND: 122,              // continuous run in a direction, until stopped
     MOTOR_RUN_FOR_DEGREES_COMMAND: 124,  // precise, calibrated rotation — used for turns
-    MOTOR_RUN_TO_RELATIVE_POSITION_COMMAND: 130,
     MOTOR_STOP_COMMAND: 138,
-    MOTOR_SET_SPEED_COMMAND: 140,
-    PG_DOUBLE_MOTOR: 513
+    MOTOR_SET_SPEED_COMMAND: 140
   };
 
   // Confirmed against a real, working implementation of this same hardware.
@@ -2787,21 +2723,11 @@
     return b;
   }
 
-  function motorRunToRel(mask, pos) {
-    const b = new Uint8Array(6);
-    const dv = new DataView(b.buffer);
-    dv.setUint8(0, LEGO.MOTOR_RUN_TO_RELATIVE_POSITION_COMMAND);
-    dv.setUint8(1, mask);
-    dv.setInt32(2, Math.round(pos), true);
-    return b;
-  }
-
   function motorStopMsg(mask) {
     return u8(LEGO.MOTOR_STOP_COMMAND, mask);
   }
 
   let bleDevice = null;
-  let pending = {}; // responseId -> resolver, mirrors the reference implementation's handshake pattern
 
   function setBleStatus(text, connected) {
     ['supervised', 'unsupervised'].forEach(tabId => {
@@ -2815,26 +2741,10 @@
     });
   }
 
-  function awaitResponse(responseId, timeout) {
-    return new Promise(resolve => {
-      pending[responseId] = resolve;
-      setTimeout(() => {
-        if (pending[responseId]) { delete pending[responseId]; resolve(null); }
-      }, timeout);
-    });
-  }
-
-  function onNotify(dv) {
-    if (dv.byteLength < 1) return;
-    const id = dv.getUint8(0);
-    if (pending[id]) {
-      const resolve = pending[id];
-      delete pending[id];
-      resolve(new DataView(dv.buffer, dv.byteOffset + 1, dv.byteLength - 1));
-    }
-    // Live motor-position / sensor notifications (type 60) aren't needed for
-    // simple directional driving, so they're not parsed here.
-  }
+  // Live motor-position / sensor notifications aren't needed for simple
+  // directional driving, so nothing is parsed here — this only exists as
+  // the required listener for the device's notification characteristic.
+  function onNotify(dv) {}
 
   // All writes are chained through this queue so two calls fired close
   // together (e.g. motor 1's and motor 2's speed commands) never overlap —
