@@ -1227,7 +1227,7 @@
     if (removed) {
       visitedRoute = visitedRoute.filter(p => p !== removed);
       predictedOrder = predictedOrder.filter(p => p !== removed);
-      currentlyNearStops.delete(removed);
+      recordedStops.delete(removed);
     }
     renderRouteLog();
     disableRouteModelUi();
@@ -1240,7 +1240,7 @@
     points = [];
     visitedRoute = [];
     predictedOrder = [];
-    currentlyNearStops = new Set();
+    recordedStops = new Set();
     renderRouteLog();
     disableRouteModelUi();
     updateStatus();
@@ -1251,7 +1251,7 @@
     haltAutopilotIfActive();
     visitedRoute = [];
     predictedOrder = [];
-    currentlyNearStops = new Set();
+    recordedStops = new Set();
     renderRouteLog();
     disableRouteModelUi();
     updateStatus();
@@ -1915,13 +1915,10 @@
     return Math.sqrt(dx * dx + dy * dy) <= STOP_VISIT_TOLERANCE;
   }
 
-  // Tracks which stops are currently within range, so a visit is only
-  // recorded the moment the bus ENTERS a store's range — not on every
-  // frame it happens to still be nearby. Without this, two stores placed
-  // close together could ping-pong: each frame, whichever one wasn't the
-  // very last entry would pass a simple "not equal to last" check and get
-  // re-added, flooding the log with alternating duplicates.
-  let currentlyNearStops = new Set();
+  // Stores already added to visitedRoute this demonstrated route — checked
+  // permanently, not just "currently nearby," so a stop only ever counts
+  // once even if the bus leaves its range and later drives past it again.
+  let recordedStops = new Set();
 
   // Records a store as visited the moment the bus drives past it while
   // actually traveling on that store's own road — this is what builds the
@@ -1929,18 +1926,15 @@
   // straight-line distance) avoids falsely crediting a stop that merely
   // sits close by on a different, perpendicular road.
   function checkRouteVisits() {
-    const stillNear = new Set();
     for (const p of points) {
+      if (recordedStops.has(p)) continue;
       if (!isNearStop(p, robotX, robotY)) continue;
-      stillNear.add(p);
-      if (!currentlyNearStops.has(p)) {
-        visitedRoute.push(p);
-        renderRouteLog();
-        disableRouteModelUi(); // new data means the old trained model is stale
-        updateStatus();
-      }
+      recordedStops.add(p);
+      visitedRoute.push(p);
+      renderRouteLog();
+      disableRouteModelUi(); // new data means the old trained model is stale
+      updateStatus();
     }
-    currentlyNearStops = stillNear;
   }
 
   function driveAnimLoop(timestamp) {
@@ -1994,7 +1988,6 @@
     routeTrail = [{ x: robotX, y: robotY }];
     autopilotTrail = [];
     autopilotVisited = new Set();
-    currentlyNearStops = new Set();
     draw();
   }
 
